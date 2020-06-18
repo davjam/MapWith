@@ -1,7 +1,7 @@
 name:                MapWith
 version:             0.1.0.0
 
-synopsis:            A library to map over Traversables, with params based on "distance" from start or end of structure
+synopsis:            mapWith: like fmap, but can "inject" additional arguments such as whether first (or last) element, index from start (or end), previous (or next) element, etc.
 
 -- description:
 
