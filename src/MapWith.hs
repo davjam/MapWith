@@ -11,7 +11,7 @@ module MapWith
   , ($->), (<-$), (*->), (<-*)
   
   , withFirstLast, andFirstLast
-  , withPrevNext, andPrevNext
+  , withPrevNext,  andPrevNext
   )
 where
 
@@ -93,12 +93,3 @@ withPrevNext f = mapWith $ f $-> adjElt <-* adjElt
 
 andPrevNext :: Traversable t => t a -> t (a, Maybe a, Maybe a)
 andPrevNext = withPrevNext (,,)
-
-{-
-There are two optimisations I'd like to make:
-1. in the case that we only traverse in one direction, we don't call both itMapL and itMapR
-2. in the case that we don't use the Traversable's elements (e.g. in adjElt), we don't construct the (init value, f...) pairs
-
-BUT: maybe after the optimising compilers been at it, neither of these are a problem?
-AND: I've not found good ways to do either.
--}
