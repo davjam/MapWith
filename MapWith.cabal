@@ -20,7 +20,7 @@ library
   default-language:    Haskell2010
   build-depends:       base >=4.11 && <4.12
   ghc-options:         -Wall
-  other-extensions:    ScopedTypeVariables, ExistentialQuantification
+  other-extensions:    ExistentialQuantification
 
   exposed-modules:     MapWith
 
