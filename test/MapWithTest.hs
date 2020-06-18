@@ -26,12 +26,14 @@ fbb = ["foo", "bar", "baz"]
 tests :: [Bool]
 tests =
   [
-    mapWith (testFn0 $-> limIt) "abc" == [True,  False, False]
-  , mapWith (testFn0 <-$ limIt) "abc" == [False, False, True ]
-  , mapWith ((\_ a b c d -> (a,b,c,d)) <-$ limIt *-> ixIt <-* ixIt *-> limIt) "abc" == [(False,0,2,True),(False,1,1,False),(True,2,0,False)]
-  , mapWith (testFn0 $-> adjElt) "abc" == [Nothing, Just 'a', Just 'b']
-  , mapWith (testFn0 <-$ adjElt) "abc" == [Just 'b', Just 'c', Nothing]
-  , andFirstLast "abc" == [('a',True,False),('b',False,False),('c',False,True)]
+    mapWith (testFn0 $-> limIt) "abc"   == [True,  False, False]
+  , mapWith (testFn0 <-$ limIt) "abc"   == [False, False, True ]
+  , mapWith ((\_ a b c d -> (a,b,c,d)) <-$ limIt *-> ixIt <-* ixIt *-> limIt) "abc"
+                                        == [(False,0,2,True),(False,1,1,False),(True,2,0,False)]
+  , mapWith (testFn0 $-> adjElt) "abc"  == [Nothing, Just 'a', Just 'b']
+  , mapWith (testFn0 <-$ adjElt) "abc"  == [Just 'b', Just 'c', Nothing]
+  , andFirstLast "abc"                  == [('a',True,False),('b',False,False),('c',False,True)]
+  , take 3 (andFirstLast [1..])         == [(1,True,False),(2,False,False),(3,False,False)]
   ]
 
 main = do

@@ -38,9 +38,9 @@ data Injector a i = forall s. Injector
 pairIt :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
 pairIt (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
   where
-  nxt a (s1, s2) = let (i1, s1') = n1 a s1
-                       (i2, s2') = n2 a s2
-                   in ((i1, i2), (s1', s2'))
+  nxt a ~(s1, s2) = let (i1, s1') = n1 a s1       -- !! NOTE THE ~ !! It allows "constant" iterators (e.g. limIt), and hence e.g. andFirstLast to work on infinite lists.
+                        (i2, s2') = n2 a s2
+                    in ((i1, i2), (s1', s2'))
 
 nullIt :: Injector a ()
 nullIt = Injector (\_ _ -> ((), ())) ()
