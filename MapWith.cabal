@@ -1,0 +1,38 @@
+name:                MapWith
+version:             0.1.0.0
+
+synopsis:            A library to map over Traversables, with params based on "distance" from start or end of structure
+
+-- description:
+
+license:             BSD3
+license-file:        LICENSE
+author:              David James
+
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+
+-- Constraint on the version of Cabal needed to build this package.
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  build-depends:       base >=4.11 && <4.12
+  ghc-options:         -Wall
+  other-extensions:    ScopedTypeVariables, ExistentialQuantification
+
+  exposed-modules:     MapWith
+
+  -- Modules included in this library but not exported.
+  -- other-modules:
+
+Test-Suite test-MapWith
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      src test
+  default-language:    Haskell2010
+  build-depends:       base >= 4 && < 5
+  main-is:             MapWithTest.hs
+  
+  Other-modules:
+    MapWith
