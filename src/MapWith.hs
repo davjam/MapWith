@@ -57,22 +57,41 @@ itMapR (Iterator nxt sInit) = snd . mapAccumR applyBound sInit
   where
   applyBound s f = let (x, s') = nxt s in (s', f x)
 
-data ItPlan a l r b = ItPlan (a -> l -> r -> b) (Iterator l) (Iterator r)
+{-
+This is an optimisation, though I'm not sure it's really worth it.
+Ideally, if NeedsL, we'd only itL, but I can't find a way to make that happen.
+At least this just applies only an fmap instead of a mapAccumR, but does this save much?
+-}
+
+zMap :: Traversable t => forall b a. Iterator b -> t (b -> a) -> t a
+zMap (Iterator nxt sInit) t = let (x, _) = nxt sInit in fmap ($ x) t
+
+data ItPlan a l r b = ItPlan ItNeeds (a -> l -> r -> b) (Iterator l) (Iterator r)
+
+data ItNeeds = NeedsL | NeedsR | NeedsLR
+  deriving Show
+
+instance Semigroup ItNeeds where
+  NeedsL <> NeedsL = NeedsL
+  NeedsR <> NeedsR = NeedsR
+  _      <> _      = NeedsLR
 
 ($->) :: (a -> l -> b) -> Iterator l -> ItPlan a l () b
-f $-> it = ItPlan (\a l _ -> f a l) it nullIt
+f $-> it = ItPlan NeedsL (\a l _ -> f a l) it nullIt
 
 (<-$) :: (a -> r -> b) -> Iterator r -> ItPlan a () r b
-f <-$ it = ItPlan (\a _ r -> f a r) nullIt it
+f <-$ it = ItPlan NeedsR (\a _ r -> f a r) nullIt it
 
 (*->) :: ItPlan a l r (l' -> b) -> Iterator l' -> ItPlan a (l, l') r b
-ItPlan f itb itc *-> itb' = ItPlan (\a (l, l') r -> f a l r l') (pairIt itb itb') itc
+ItPlan n f itL itR *-> itL' = ItPlan (n <> NeedsL) (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
 
 (<-*) :: ItPlan a l r (r' -> b) -> Iterator r' -> ItPlan a l (r, r') b
-ItPlan f itb itc <-* itc' = ItPlan (\a l (r, r') -> f a l r r') itb (pairIt itc itc')
+ItPlan n f itL itR <-* itR' = ItPlan (n <> NeedsR) (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
 
 mapWith :: Traversable t => ItPlan a l r b -> t a -> t b
-mapWith (ItPlan f itb itc) l = itMapR itc $ itMapL itb $ fmap f l  --Don't run if nullIterator?
+mapWith (ItPlan NeedsL  f itL itR) l = zMap   itR $ itMapL itL $ fmap f l
+mapWith (ItPlan NeedsR  f itL itR) l = itMapR itR $ zMap   itL $ fmap f l
+mapWith (ItPlan NeedsLR f itL itR) l = itMapR itR $ itMapL itL $ fmap f l
 
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
 withFirstLast f = mapWith $ f $-> limIt <-* limIt

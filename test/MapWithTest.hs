@@ -23,8 +23,17 @@ r4 = mapWith (testFn2 $-> limIt *-> ixIt <-* zipIt [8,9,10,11]) fbb
 
 fbb = ["foo", "bar", "baz"]
 
+tests :: [Bool]
+tests =
+  [
+    mapWith (testFn0 $-> limIt) "abc" == [True,  False, False]
+  , mapWith (testFn0 <-$ limIt) "abc" == [False, False, True ]
+  , mapWith ((\_ a b c d -> (a,b,c,d)) <-$ limIt *-> ixIt <-* ixIt *-> limIt) "abc" == [(False,0,2,True),(False,1,1,False),(True,2,0,False)]
+  , tagFirstLast "abc" == [('a',True,False),('b',False,False),('c',False,True)]
+  ]
+
 main = do
-  if tagFirstLast "abc" == [('a',True,False),('b',False,False),('c',False,True)]
+  if and tests
   then exitSuccess
   else exitFailure
 
