@@ -24,11 +24,10 @@ module MapWith
   -- * Pre-Packaged Maps
   -- $PrePackagedMaps
     withFirstLast
-  , withPrevNext
-
-  -- * Pre-Packaged Tuple Maps
   , andFirstLast
+  , withPrevNext
   , andPrevNext
+
 
   -- * Custom Maps
   -- $CustomMaps
@@ -93,11 +92,11 @@ For example:
 +-------+---------------+------+---------------+-----------------+
 + Call  + Initial State + Item + Injection     + New State       +
 +=======+===============+======+===============+=================+
-+ 0     + 17            + 4    + 17+4=__21__   + 4+1=5           +
++ 1     + 17            + 4    + 17+4=__21__   + 4+1=5           +
 +-------+---------------+------+---------------+-----------------+
-+ 1     + 5             + 8    + 5+8=__13__    + 8+1=9           +
++ 2     + 5             + 8    + 5+8=__13__    + 8+1=9           +
 +-------+---------------+------+---------------+-----------------+
-+ 2     + 9             + 3    + 9+3=__12__    + 3+1=4 (ignored) |
++ 3     + 9             + 3    + 9+3=__12__    + 3+1=4 (ignored) |
 +-------+---------------+------+---------------+-----------------+
 
 >>> mapWith ((\_ i -> i) <-$ funnyInjector) [4,8,3]
@@ -106,11 +105,11 @@ For example:
 +-------+---------------+------+---------------+-----------------+
 + Call  + Initial State + Item + Injection     + New State       +
 +=======+===============+======+===============+=================+
-+ 0     + 17            + 3    + 17+3=__20__   + 3+1=4           +
++ 1     + 17            + 3    + 17+3=__20__   + 3+1=4           +
 +-------+---------------+------+---------------+-----------------+
-+ 1     + 4             + 8    + 4+8=__12__    + 8+1=9           +
++ 2     + 4             + 8    + 4+8=__12__    + 8+1=9           +
 +-------+---------------+------+---------------+-----------------+
-+ 2     + 9             + 4    + 9+4=__13__    + 4+1=5 (ignored) |
++ 3     + 9             + 4    + 9+4=__13__    + 4+1=5 (ignored) |
 +-------+---------------+------+---------------+-----------------+
 
 More usefully, this would allow for e.g. the prior two elements:
@@ -261,6 +260,10 @@ Maps over a Traversable, with additional parameters indicating whether an elemen
 ["*foo", "bar", "baz*"]
 -}
 
+andFirstLast :: Traversable t => t a -> t (a, Bool, Bool)
+andFirstLast = withFirstLast (,,)
+-- ^ > andFirstLast = withFirstLast (,,)
+
 withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
 withPrevNext f = mapWith $ f $-> adjElt <-* adjElt
 {-^
@@ -271,10 +274,6 @@ The second (or third) param to the map function is 'Nothing' when called for the
 >>> let f x prvMay nxtMay = maybe "*" (cmp x) prvMay ++ x ++ maybe "*" (cmp x) nxtMay; cmp x y = show $ compare x y in withPrevNext f ["foo", "bar", "baz"]
 ["*fooGT","LTbarLT","GTbaz*"]
 -}
-
-andFirstLast :: Traversable t => t a -> t (a, Bool, Bool)
-andFirstLast = withFirstLast (,,)
--- ^ > andFirstLast = withFirstLast (,,)
 
 andPrevNext :: Traversable t => t a -> t (a, Maybe a, Maybe a)
 andPrevNext = withPrevNext (,,)
