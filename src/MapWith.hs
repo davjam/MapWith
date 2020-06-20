@@ -32,10 +32,8 @@ module MapWith
   -- * Custom Maps
   -- $CustomMaps
   , mapWith
-  , ($->)
-  , (<-$)
-  , (*->)
-  , (<-*)
+  , (^->)
+  , (<-^)
   
   -- * Predefined Injectors
   , limIt
@@ -58,8 +56,6 @@ These 'names' are used for types and variables throughout:
 [@a@]: the value in the input Traversable
 [@b@]: the result in the output Traversable
 [@i@]: an output from an Injector, injected into the mapper
-[@l@]: an i that's determined "from the left"
-[@r@]: an i that's determined "from the right"
 [@s@]: the internal state in an Injector
 -}
 
@@ -86,7 +82,7 @@ For example:
 
 >>> funnyNext a s = (a + s, a + 1)
 >>> funnyInjector = Injector funnyNext 17
->>> mapWith ((\_ i -> i) $-> funnyInjector) [4,8,3]
+>>> mapWith ((\_ i -> i) ^-> funnyInjector) [4,8,3]
 [21,13,12]
 
 +-------+---------------+------+---------------+-----------------+
@@ -99,7 +95,7 @@ For example:
 + 3     + 9             + 3    + 9+3=__12__    + 3+1=4 (ignored) |
 +-------+---------------+------+---------------+-----------------+
 
->>> mapWith ((\_ i -> i) <-$ funnyInjector) [4,8,3]
+>>> mapWith ((\_ i -> i) <-^ funnyInjector) [4,8,3]
 [13,12,20]
 
 +-------+---------------+------+---------------+-----------------+
@@ -160,7 +156,7 @@ from the right: the first element will be injected for the last item in the Trav
 
 As a result of lazyness, it is not always an error if there are not enough elements, for example:
 
->>> drop 1 $ mapWith ((\_ i -> i) <-$ zipIt [8,2]) "abc"
+>>> drop 1 $ mapWith ((\_ i -> i) <-^ zipIt [8,2]) "abc"
 [2,8]
 -}
 
@@ -193,7 +189,7 @@ mapWith /MapPlan/ /myTraversable/
 -}
 
 mapWith :: Traversable t
-        => MapPlan a l r b  -- ^ Created by combining a map function with injectors, using the operators listed below.
+        => MapPlan a b  -- ^ Created by combining a map function with injectors, using the operators listed below.
         -> t a
         -> t b
 mapWith (MapPlan f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a -> (a, f a)) l
@@ -201,7 +197,7 @@ mapWith (MapPlan f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a ->
 {-^
 The map function will take one parameter from the Traversable, then one from each injector. For example:
 
-> mapWith ((\w x y z -> (w,x,y,z)) <-$ limIt *-> ixIt <-* zipIt [8,2,7,1]) "abc"
+> mapWith ((\w x y z -> (w,x,y,z)) <-^ limIt ^-> ixIt <-^ zipIt [8,2,7,1]) "abc"
 
 Will call myFn 3 times, once for each character in "abc":
 
@@ -217,42 +213,37 @@ Will call myFn 3 times, once for each character in "abc":
 
 The meaning of the operators is:
 
-+-------------------------------+-----------------+------------------+
-+                               + "from the left" + "from the right" +
-+-------------------------------+-----------------+------------------+
-+ First operator after function +  @$->@          +  @<-$@           +
-+-------------------------------+-----------------+------------------+
-+ Subsequent operators          +  @*->@          +  @<-*@           +
-+-------------------------------+-----------------+------------------+
+- @^->@: inject "from the left"
+- @<-^@: inject "from the right"
 
 Hence:
 
-- @<-$ limIt@: inject True if this is the limit from the right (i.e. the last element).
-- @*-> ixIt@: inject the position from the left
-- @<-* zipIt [8,9,10,11]@: inject elements from this list, from the right.
+- @<-^ limIt@: inject True if this is the limit from the right (i.e. the last element).
+- @^-> ixIt@: inject the position from the left
+- @<-^ zipIt [8,9,10,11]@: inject elements from this list, from the right.
 
 -}
 
-data MapPlan a l r b = MapPlan (a -> l -> r -> b) (Injector a l) (Injector a r)
+data MapPlan a b = forall l r. MapPlan (a -> l -> r -> b) (Injector a l) (Injector a r)
 
-($->) :: (a -> l -> b) -> Injector a l -> MapPlan a l () b
-f $-> it = MapPlan (\a l _ -> f a l) it nullIt
+class Mapper m where
+  (^->) :: (m a (i -> b)) -> Injector a i -> MapPlan a b
+  (<-^) :: (m a (i -> b)) -> Injector a i -> MapPlan a b
 
-(<-$) :: (a -> r -> b) -> Injector a r -> MapPlan a () r b
-f <-$ it = MapPlan (\a _ r -> f a r) nullIt it
-
-(*->) :: MapPlan a l r (l' -> b) -> Injector a l' -> MapPlan a (l, l') r b
-MapPlan f itL itR *-> itL' = MapPlan (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
-
-(<-*) :: MapPlan a l r (r' -> b) -> Injector a r' -> MapPlan a l (r, r') b
-MapPlan f itL itR <-* itR' = MapPlan (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+instance Mapper MapPlan where
+  MapPlan f itL itR ^-> itL' = MapPlan (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
+  MapPlan f itL itR <-^ itR' = MapPlan (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+  
+instance Mapper (->) where
+  f ^-> itL' = MapPlan (\a l _ -> f a l) itL' nullIt
+  f <-^ itR' = MapPlan (\a _ r -> f a r) nullIt itR'
 
 {-$PrePackagedMaps
 Some pre-defined maps with commonly used injectors.
 -}
 
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
-withFirstLast f = mapWith $ f $-> limIt <-* limIt
+withFirstLast f = mapWith $ f ^-> limIt <-^ limIt
 {-^
 Maps over a Traversable, with additional parameters indicating whether an element is the first or last (or both) in the list.
 
@@ -265,7 +256,7 @@ andFirstLast = withFirstLast (,,)
 -- ^ > andFirstLast = withFirstLast (,,)
 
 withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
-withPrevNext f = mapWith $ f $-> adjElt <-* adjElt
+withPrevNext f = mapWith $ f ^-> adjElt <-^ adjElt
 {-^
 Maps over a Traversable, with additional parameters indicating the previous and next elements.
 
