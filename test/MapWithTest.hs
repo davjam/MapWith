@@ -10,7 +10,7 @@ testFn s False index = replicate index ' ' ++ s
 
 testFn2 :: String -> Bool -> Int -> Int -> String
 testFn2 s True  index ind2 = replicate index ' ' ++ s ++ (show ind2) ++ "*"
-testFn2 s False index ind2 = replicate index ' ' ++ s ++ (show ind2) 
+testFn2 s False index ind2 = replicate index ' ' ++ s ++ (show ind2)
 
 testFnP :: String -> (Bool, Int) -> String
 testFnP s (True , index) = replicate index ' ' ++ s ++ "*"
