@@ -29,8 +29,8 @@ module MapWith
   -- * Custom Maps
   -- $CustomMaps
   , mapWith
-  , (^->)
-  , (<-^)
+  , InjectedFn
+  , Injectable(..)  --would prefer to only export ^-> and <-^, but the Haddock doc refers to the class. Hmmm.
 
   -- * Predefined Injectors
   , limIt
@@ -151,32 +151,26 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 --   from the right: inject 'Just' the next element, or 'Nothing' if there isn't one (i.e. for the last item).
 -- (The "previous from the right" is the "next").
 
+
 -- $CustomMaps
+--
+-- In general, a map function will take one parameter from the Traversable, then one each from any number of injectors. For example:
 -- 
--- If you want a map function with different values injected, you can create them. The general code is:
+-- >>> mapFn w x y z = (w, x, y, z)
+-- >>> injectedFn = mapFn <-^ limIt ^-> ixIt <-^ zipIt [8,2,7,1]
+-- >>> mapWith injectedFn "abc"
+-- [('a',False,0,7),('b',False,1,2),('c',True,2,8)]
 -- 
--- @mapWith /MapPlan/ /myTraversable/@
-
-mapWith :: Traversable t
-        => MapPlan a b  -- ^ Created by combining a map function with injectors, using the operators listed below.
-        -> t a
-        -> t b
-mapWith (MapPlan f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a -> (a, f a)) l
-  where
-  itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-  itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
-
-  itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-  itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
-
-  acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
-  acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
-
--- ^ The map function will take one parameter from the Traversable, then one from each injector. For example:
--- 
--- > mapWith ((\w x y z -> (w,x,y,z)) <-^ limIt ^-> ixIt <-^ zipIt [8,2,7,1]) "abc"
--- 
--- Will call myFn 3 times, once for each character in "abc":
+-- Where:
+--
+-- - @mapFn@: a function that maps over a structure, but requires additional parameters
+-- - @injectedFn@: represents the combination of @mapFn@ with three injectors that provide the required parameters:
+--
+--     - @'<-^' 'limIt'@: injects True if this is the limit, from the right (i.e. the last element).
+--     - @'^->' 'ixIt'@: inject the position, from the left
+--     - @'<-^' 'zipIt' [8,9,10,11]@: inject elements from this list, from the right.
+--
+-- 'mapWith' then maps the @mapFn@ over the structure, with the following parameters:
 -- 
 -- +------+--------+---------+---------+---------+
 -- | Call | w      | x       | y       | z       |
@@ -187,31 +181,60 @@ mapWith (MapPlan f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a ->
 -- +------+--------+---------+---------+---------+
 -- |    3 | \'c\'  | 'True'  | 2       | 8       |
 -- +------+--------+---------+---------+---------+
--- 
--- The meaning of the operators is:
--- 
--- - @^->@: inject "from the left"
--- - @<-^@: inject "from the right"
--- 
--- Hence:
--- 
--- - @<-^ limIt@: inject True if this is the limit from the right (i.e. the last element).
--- - @^-> ixIt@: inject the position from the left
--- - @<-^ zipIt [8,9,10,11]@: inject elements from this list, from the right.
 
-data MapPlan a b = forall l r. MapPlan (a -> l -> r -> b) (Injector a l) (Injector a r)
+mapWith :: Traversable t
+        => InjectedFn a b
+        -> t a
+        -> t b
+mapWith (InjectedFn f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a -> (a, f a)) l
+  where
+  itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+  itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
 
-class Mapper m where
-  (^->) :: (m a (i -> b)) -> Injector a i -> MapPlan a b
-  (<-^) :: (m a (i -> b)) -> Injector a i -> MapPlan a b
+  itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+  itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
 
-instance Mapper MapPlan where
-  MapPlan f itL itR ^-> itL' = MapPlan (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
-  MapPlan f itL itR <-^ itR' = MapPlan (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+  acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
+  acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
 
-instance Mapper (->) where
-  f ^-> itL' = MapPlan (\a l _ -> f a l) itL' nullIt
-  f <-^ itR' = MapPlan (\a _ r -> f a r) nullIt itR'
+-- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
+
+data InjectedFn a b = forall l r. InjectedFn (a -> l -> r -> b) (Injector a l) (Injector a r)
+
+-- ^ A function from @a@, plus a number of injected values, to @b@.
+--
+-- Constructed by combining  a map function with 'Injector's using the operators below.
+--
+-- The sequence:
+--
+-- @(a -> i1 -> i2 -> ... -> in -> b) /op1/ /inj1/ /op2/ /inj2/ ... /opn/ /injn/@
+--
+-- where:
+--
+-- - each @/op/@ is '^->' or '<-^'; and
+-- - each @/inj/@ is an 'Injector'
+--
+-- produces an @'InjectedFn' a b@, with n injected values.
+
+class Injectable m where
+  -- | Inject "from the left"
+  (^->) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
+  -- | Inject "from the right"
+  (<-^) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
+  
+-- ^Something that can have a parameter injected, to create an 'InjectedFn'
+
+instance Injectable (->) where
+  f ^-> itL' = InjectedFn (\a l _ -> f a l) itL' nullIt
+  f <-^ itR' = InjectedFn (\a _ r -> f a r) nullIt itR'
+
+-- ^ To add the first 'Injector' to a function: @fn /op/ /inj/ :: InjectedFn@
+
+instance Injectable InjectedFn where
+  InjectedFn f itL itR ^-> itL' = InjectedFn (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
+  InjectedFn f itL itR <-^ itR' = InjectedFn (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+
+-- ^ To add subsequent 'Injector's to a function
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
