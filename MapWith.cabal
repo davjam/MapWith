@@ -34,5 +34,44 @@ Test-Suite test-MapWith
   build-depends:       base >= 4 && < 5
   main-is:             MapWithTest.hs
   
-  Other-modules:
-    MapWith
+  Other-modules:       MapWith
+
+executable perf-prev-next-baseline
+  default-language:    Haskell2010
+  hs-source-dirs:      src perf
+  main-is:             PrevNextBaseline.hs
+  ghc-options:         -O
+                       -fprof-auto
+                       "-with-rtsopts=-hd -p"
+  build-depends:       base >= 4.5 && < 5
+  Other-modules:       MapWith
+
+executable perf-ind-end-baseline
+  default-language:    Haskell2010
+  hs-source-dirs:      src perf
+  main-is:             IndEndBaseline.hs
+  ghc-options:         -O
+                       -fprof-auto
+                       "-with-rtsopts=-hd -p"
+  build-depends:       base >= 4.5 && < 5
+  Other-modules:       MapWith
+
+executable perf-prev-next
+  default-language:    Haskell2010
+  hs-source-dirs:      src perf
+  main-is:             PrevNext.hs
+  ghc-options:         -O2
+                       -fprof-auto
+                       "-with-rtsopts=-hd -p"
+  build-depends:       base >= 4.5 && < 5
+  Other-modules:       MapWith
+
+executable perf-ind-end
+  default-language:    Haskell2010
+  hs-source-dirs:      src perf
+  main-is:             IndEnd.hs
+  ghc-options:         -O2
+                       -fprof-auto
+                       "-with-rtsopts=-hd -p"
+  build-depends:       base >= 4.5 && < 5
+  Other-modules:       MapWith
