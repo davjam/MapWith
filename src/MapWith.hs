@@ -30,7 +30,8 @@ module MapWith
   -- $CustomMaps
   , mapWith
   , InjectedFn
-  , Injectable(..)  --would prefer to only export ^-> and <-^, but the Haddock doc refers to the class. Hmmm.
+  , (^->)
+  , (<-^)
 
   -- * Predefined Injectors
   , limIt
@@ -220,21 +221,20 @@ class Injectable m where
   -- | Inject "from the left"
   (^->) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
+  --
+  -- An 'Injectable' is (recursively) either:
+  --
+  -- - a function @(a -> i -> b)@; or
+  -- - an @InjectedFn a (i -> b)@, created by @'Injectable' /op/ 'Injector'@
   (<-^) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
-  
--- ^Something that can have a parameter injected, to create an 'InjectedFn'
 
 instance Injectable (->) where
   f ^-> itL' = InjectedFn (\a l _ -> f a l) itL' nullIt
   f <-^ itR' = InjectedFn (\a _ r -> f a r) nullIt itR'
 
--- ^ To add the first 'Injector' to a function: @fn /op/ /inj/ :: InjectedFn@
-
 instance Injectable InjectedFn where
   InjectedFn f itL itR ^-> itL' = InjectedFn (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
   InjectedFn f itL itR <-^ itR' = InjectedFn (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
-
--- ^ To add subsequent 'Injector's to a function
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
