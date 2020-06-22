@@ -185,17 +185,18 @@ mapWith :: Traversable t
         -> t a
         -> t b
 mapWith (InjectedFnLR f itL itR) = fmap snd . itMapR itR . itMapL itL . fmap (\a -> (a, f a))
-mapWith (InjectedFnL  f itL    ) = fmap snd              . itMapL itL . fmap (\a -> (a, f a))
-mapWith (InjectedFnR  f     itR) = fmap snd . itMapR itR              . fmap (\a -> (a, f a))
+  where
+  itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+  itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
+  itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+  itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
+  acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
+  acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
 
-itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
-
-itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
-
-acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
-acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
+mapWith (InjectedFnL  f (Injector gen z)) = snd . mapAccumL acc z
+  where acc s a = let (i, s') = gen a s in (s', f a i)
+mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
+  where acc s a = let (i, s') = gen a s in (s', f a i)
 
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 
