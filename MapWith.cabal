@@ -41,7 +41,6 @@ executable perf-prev-next-baseline
   hs-source-dirs:      perf
   main-is:             PrevNextBaseline.hs
   ghc-options:         -O2
-                       -prof
                        -fprof-auto
                        "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
@@ -51,7 +50,6 @@ executable perf-ind-end-baseline
   hs-source-dirs:      perf
   main-is:             IndEndBaseline.hs
   ghc-options:         -O2
-                       -prof
                        -fprof-auto
                        "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
@@ -61,7 +59,6 @@ executable perf-prev-next
   hs-source-dirs:      src perf
   main-is:             PrevNext.hs
   ghc-options:         -O2
-                       -prof
                        -fprof-auto
                        "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
@@ -72,7 +69,6 @@ executable perf-ind-end
   hs-source-dirs:      src perf
   main-is:             IndEnd.hs
   ghc-options:         -O2
-                       -prof
                        -fprof-auto
                        "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
