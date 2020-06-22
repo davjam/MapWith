@@ -115,9 +115,6 @@ pairIt (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
                         (i2, s2') = n2 a s2
                     in ((i1, i2), (s1', s2'))
 
-nullIt :: Injector a ()
-nullIt = Injector (\_ _ -> ((), ())) ()
-
 limIt :: Injector a Bool
 limIt = Injector (\_ i -> (i, False)) True
 -- ^ from the left: inject 'True' for the first element, else inject 'False'.
@@ -187,20 +184,25 @@ mapWith :: Traversable t
         => InjectedFn a b
         -> t a
         -> t b
-mapWith (InjectedFn f itL itR) l = fmap snd $ itMapR itR $ itMapL itL $ fmap (\a -> (a, f a)) l
-  where
-  itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-  itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
+mapWith (InjectedFnLR f itL itR) = fmap snd . itMapR itR . itMapL itL . fmap (\a -> (a, f a))
+mapWith (InjectedFnL  f itL    ) = fmap snd              . itMapL itL . fmap (\a -> (a, f a))
+mapWith (InjectedFnR  f     itR) = fmap snd . itMapR itR              . fmap (\a -> (a, f a))
 
-  itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
-  itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
+itMapL :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+itMapL (Injector gen z) = snd . mapAccumL (acc gen) z
 
-  acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
-  acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
+itMapR :: Traversable t => Injector a i -> t (a, i -> b) -> t (a, b)
+itMapR (Injector gen z) = snd . mapAccumR (acc gen) z
+
+acc :: (a -> s -> (i, s)) -> s -> (a, i -> b) -> (s, (a, b))
+acc gen s (a, fi) = let (i, s') = gen a s in (s', (a, fi i))
 
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 
-data InjectedFn a b = forall l r. InjectedFn (a -> l -> r -> b) (Injector a l) (Injector a r)
+data InjectedFn a b
+  = forall l r. InjectedFnLR (a -> l -> r -> b) (Injector a l) (Injector a r)
+  | forall l  . InjectedFnL  (a -> l      -> b) (Injector a l)
+  | forall   r. InjectedFnR  (a      -> r -> b)                (Injector a r)
 
 -- ^ A function from @a@, plus a number of injected values, to @b@.
 --
@@ -229,12 +231,17 @@ class Injectable m where
   (<-^) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
 
 instance Injectable (->) where
-  f ^-> itL' = InjectedFn (\a l _ -> f a l) itL' nullIt
-  f <-^ itR' = InjectedFn (\a _ r -> f a r) nullIt itR'
+  f ^-> itL' = InjectedFnL (\a l   -> f a l) itL'
+  f <-^ itR' = InjectedFnR (\a   r -> f a r)        itR'
 
 instance Injectable InjectedFn where
-  InjectedFn f itL itR ^-> itL' = InjectedFn (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
-  InjectedFn f itL itR <-^ itR' = InjectedFn (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (pairIt itL itL')    
+  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a  r  l') itL' itR    
+  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
+
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r') itL itR'
+  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')     (pairIt itR itR')    
+  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
