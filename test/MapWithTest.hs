@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 import MapWith
 import System.Exit
 
@@ -23,6 +27,9 @@ r4 = mapWith (testFn2 ^-> limIt ^-> ixIt <-^ zipIt [8,9,10,11]) fbb
 
 fbb = ["foo", "bar", "baz"]
 
+data FunnySet a = FunnySet a a a a a
+  deriving (Eq, Show, Functor, Foldable, Traversable)
+
 tests :: [Bool]
 tests =
   [
@@ -34,6 +41,8 @@ tests =
   , mapWith (testFn0 <-^ adjElt) "abc"  == [Just 'b', Just 'c', Nothing]
   , andFirstLast "abc"                  == [('a',True,False),('b',False,False),('c',False,True)]
   , take 3 (andFirstLast [1..])         == [(1,True,False),(2,False,False),(3,False,False)]
+  , andFirstLast (FunnySet 8 9 1 2 5)   == FunnySet (8,True,False) (9,False,False) (1,False,False) (2,False,False) (5,False,True)
+
   ]
 
 main = do
