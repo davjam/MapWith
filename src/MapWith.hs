@@ -192,6 +192,13 @@ mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR
   where accL s  a       = let (i, s') = genL a s in (s', (a, f a i))
         accR s (a, fal) = let (i, s') = genR a s in (s',     fal i )
 
+{-
+--This may be clever, but actually slower, and the generation of the (a,f) tuples above doesn't seem to add much time/heap.
+mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR accR zR . snd . mapAccumL accL zL
+  where accL sl a   = let (l, sl') = genL a sl in (sl', \sr -> let (r, sr') = genR a sr in (sr', f a l r))
+        accR sr fsr = fsr sr
+-}
+
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 
 data InjectedFn a b
