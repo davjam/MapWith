@@ -1,88 +1,54 @@
 # MapWith
 mapWith: like fmap, but can "inject" additional arguments such as whether first (or last) element, etc.
 
+# Background
+
+I often want to map over a list, but do something slightly different with the first or last element.
+
+For a long time I used [markbounds](https://stackoverflow.com/questions/14114011/haskell-map-operation-with-different-first-and-last-functions#answer-53282575),
+but also wanted something that:
+
+- works on structures other than lists (mapWith works on all Traversables)
+- can provide additional types of attributes (not just first/last), such as:
+  - index from start/end
+  - the previous/next element
+- makes it easy to create new types of attribute to provide.
+- can provide any number of attributes as separate arguments to a function (not just a 3-tuple).
+
+so, after only 2 years, I built a small library to do all of these.
+
 # Examples
 
-Use of a simple APIs:
+A trivial example:
+```
+mapWith ((,) <-^ isLim) "abc"
+[('a',False),('b',False),('c',True)]
+```
 
-    let f x isStart isEnd = star isStart ++ x ++ star isEnd where
-        star b = case b of True -> "*"; False -> ""
-    in withFirstLast f ["foo", "bar", "baz"]
-    == ["*foo", "bar", "baz*"]
+More examples are [here](doc/examples.hs)
 
-Or a "custom built" injection of various parameters:
+# Questions/Doubts
 
-    mapWith ((,,,,) $-> isLim <-* eltIx *-> adjElt <-* eltFrom "hello") "abc"
-    == [('a',True,2,Nothing,'l'),('b',False,1,Just 'a','e'),('c',False,0,Just 'b','h')]
+Note that this is my first library and my first use of cabal, so I've probably done some dumb things.
 
-# Usage
+Some things I wonder:
 
-## Simple APIs
+- Doesn't this already exist? (It feels like it should!)
+- Is this useful enough to be a separate library?
+- Should I name it Data.Traversable.MapWith? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
+- Is the code/documentation clear enough?
+- Should I export the Injectable class and InjectedFn constructor?
+  (I don't think it would be possible to create new instances anyway.)
+  Not exporting them leaves an annoying warning when I build the documentation, and doesn't create a hyperlink for Injectable.
+- Should I make up loads more Injectors, or leave that for anyone who uses the library?
 
-There are four simple APIs, which should be easy to use.
+# Performance
 
-The two beginning "with" take a function as first parameter. The function takes 3 parameters: the Traversable element then two injected parameters.
-The two beginning "and" don't take a function, they return a triple of (element, injected1, injected2)
+I've tried to make it perform well, including ensuring it "traverses" in each direction at most once, and only goes in both directions if it needs to.
 
-The two ending FirstLast inject two Bools: am I the first in the Traversable, am I the last?
-The two ending PrevNext inject two Maybes. These are Nothing for the first or last elements.
+Compared to the "benchmarks" I set myself, I think it's "OK". I'd like it to be better, but think I'd need help.
+I've read about / tried things like fusing & unboxed tuples, but haven't yet found a way to employ them that improves performance.
+There are some things I (naïvely) would have expected the optimising compiler to do, but it doesn't seem to.
 
-## Custom maps
-
-    mapWith <plan> <traversable>
-
-A plan is built from a function combined with "injectors":
-
-    f <op> injector <op> injector ...
-
-There has to be at least one injector. f must take 1 parameter (from the traversable) plus one from each injector.
-
-The first op has to be $-> or <-$. Subsequent ones must be \*-> or <-\*
-
-$-> and \*-> mean "from the left", <-$ and <-\* mean "from the right"
-
-    f $-> isLim
-  
-injects a True for the first element, then False for the rest.
-
-    f <-$ isLim
-  
-injects a True for the last element.
-
-Other injectors:
-* eltIx: the 0-based index from the start or end
-* eltFrom l: the nth element from l.
-* adjElt: the adjacent element. With $-> essentially gives the previous element, <-$ gives the next.
-
-## Custom Injectors
-
-You can make your own!
-
-# To Do
-
-## Optimisations
-
-There are two optimisations I'd like to make:
-1. in the case that we only traverse in one direction, we don't call both itMapL and itMapR
-2. in the case that we don't use the Traversable's elements (e.g. in adjElt), we don't construct the (init value, f...) pairs
-
-But maybe after the optimising compilers been at it, neither of these are a problem? 
-And I've not found good ways to do them (yet) either.
-
-## Fewer Operators
-
-Something a bit like this, so I don't need different operators at the start:
-
-    mapWith (f *-> limIr *-> eltIx) l
-
-    class Mapper m where
-      (*->) :: (m a l r (l' -> b)) -> Injector a l' -> MapPlan a (l, l') r b
-      
-    instance Mapper MapPlan where
-      MapPlan f itL itR *-> itL' = MapPlan (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
-      
-    instance Mapper (-> a b) where  --ERROR!!
-      f *-> itL' = MapPlan (\a l _ -> f a l) itL' nullIt
-
-Is there a way around the type mismatch?
+I myself only use it on relatively small structures, and it's more than good enough for these. I'd be grateful for any suggestions.
 
