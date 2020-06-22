@@ -7,9 +7,9 @@
 -- Copyright   : (c) David James, 2020
 -- License     : BSD3
 -- Stability   : Experimental
--- 
+--
 -- Provides fmap-like functionality, but can also "inject" additional parameters to the mapping function, such as:
--- 
+--
 -- * whether the first / last element
 -- * the previous / next element
 -- * the index from the start / end
@@ -62,25 +62,25 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 -- ^ Injectors have an initial state and a generate function.
 --
 --  For each element, the generate function can use both:
---  
+--
 --  - the value from the Transformer, and
 --  - the current state
---  
+--
 --  to determine both:
---  
+--
 --  - the injection value, and
 --  - the new state.
---  
+--
 --  The first value to inject is determined by a first call to the generate function.
 --  The first call to the generate function is with the first (or last) element from the Transformer and the initial state.
---  
+--
 --  For example:
---  
+--
 --  >>> funnyNext a s = (a + s, a + 1)
 --  >>> funnyInjector = Injector funnyNext 17
 --  >>> mapWith ((\_ i -> i) ^-> funnyInjector) [4,8,3]
 --  [21,13,12]
---  
+--
 --  +-------+---------------+------+---------------+-----------------+
 --  + Call  + Initial State + Item + Injection     + New State       +
 --  +=======+===============+======+===============+=================+
@@ -90,10 +90,10 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --  +-------+---------------+------+---------------+-----------------+
 --  + 3     + 9             + 3    + 9+3=__12__    + 3+1=4 (ignored) |
 --  +-------+---------------+------+---------------+-----------------+
---  
+--
 --  >>> mapWith ((\_ i -> i) <-^ funnyInjector) [4,8,3]
 --  [13,12,20]
---  
+--
 --  +-------+---------------+------+---------------+-----------------+
 --  + Call  + Initial State + Item + Injection     + New State       +
 --  +=======+===============+======+===============+=================+
@@ -103,9 +103,9 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --  +-------+---------------+------+---------------+-----------------+
 --  + 3     + 9             + 4    + 9+4=__13__    + 4+1=5 (ignored) |
 --  +-------+---------------+------+---------------+-----------------+
---  
+--
 --  More usefully, this would allow for e.g. the prior two elements:
---  
+--
 --  > prev2Inj = Injector (\x i@(prev1May, prev2May) -> (i, (Just x, prev1May))) (Nothing, Nothing)
 
 pairIt :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
@@ -134,18 +134,18 @@ zipIt f = Injector (\_ x -> (head x, tail x)) (toList f)
 -- ^ Inject each given element in turn.
 --
 -- from the left: the first element will be injected for the first item in the Traversable.
--- 
+--
 -- from the right: the first element will be injected for the last item in the Traversable.
--- 
+--
 -- As a result of lazyness, it is not always an error if there are not enough elements, for example:
--- 
+--
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ zipIt [8,2]) "abc"
 -- [2,8]
 
 adjElt :: Injector a (Maybe a)
 adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 -- ^ from the left: inject 'Just' the previous element, or 'Nothing' if there isn't one (i.e. for the first item).
--- 
+--
 --   from the right: inject 'Just' the next element, or 'Nothing' if there isn't one (i.e. for the last item).
 -- (The "previous from the right" is the "next").
 
@@ -153,12 +153,12 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 -- $CustomMaps
 --
 -- In general, a map function will take one parameter from the Traversable, then one each from any number of injectors. For example:
--- 
+--
 -- >>> mapFn w x y z = (w, x, y, z)
 -- >>> injectedFn = mapFn <-^ limIt ^-> ixIt <-^ zipIt [8,2,7,1]
 -- >>> mapWith injectedFn "abc"
 -- [('a',False,0,7),('b',False,1,2),('c',True,2,8)]
--- 
+--
 -- Where:
 --
 -- - @mapFn@: a function that maps over a structure, but requires additional parameters
@@ -169,7 +169,7 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 --     - @'<-^' 'zipIt' [8,9,10,11]@: inject elements from this list, from the right.
 --
 -- 'mapWith' then maps the @mapFn@ over the structure, with the following parameters:
--- 
+--
 -- +------+--------+---------+---------+---------+
 -- | Call | w      | x       | y       | z       |
 -- +======+========+=========+=========+=========+
@@ -237,13 +237,13 @@ instance Injectable (->) where
   f <-^ itR' = InjectedFnR (\a   r -> f a r)        itR'
 
 instance Injectable InjectedFn where
-  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (pairIt itL itL')    
-  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a  r  l') itL' itR    
-  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (pairIt itL itL') itR
+  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (pairIt itL itL')
+  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r l')         itL'              itR
+  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (pairIt itL itL')         itR
 
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r') itL itR'
-  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')     (pairIt itR itR')    
-  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r') itL (pairIt itR itR')
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r')         itL                   itR'
+  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                   (pairIt itR itR')
+  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')         itL       (pairIt itR itR')
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
@@ -251,7 +251,7 @@ instance Injectable InjectedFn where
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
 withFirstLast f = mapWith $ f ^-> limIt <-^ limIt
 -- ^ Maps over a Traversable, with additional parameters indicating whether an element is the first or last (or both) in the list.
--- 
+--
 -- >>> let f x isFirst isLast = star isFirst ++ x ++ star isLast; star b = if b then "*" else "" in withFirstLast f ["foo", "bar", "baz"]
 -- ["*foo", "bar", "baz*"]
 
@@ -262,9 +262,9 @@ andFirstLast = withFirstLast (,,)
 withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
 withPrevNext f = mapWith $ f ^-> adjElt <-^ adjElt
 -- ^ Maps over a Traversable, with additional parameters indicating the previous and next elements.
--- 
+--
 -- The second (or third) param to the map function is 'Nothing' when called for the first (or last) item, otherwise it's 'Just' the previous (or next) item.
--- 
+--
 -- >>> let f x prvMay nxtMay = maybe "*" (cmp x) prvMay ++ x ++ maybe "*" (cmp x) nxtMay; cmp x y = show $ compare x y in withPrevNext f ["foo", "bar", "baz"]
 -- ["*fooGT","LTbarLT","GTbaz*"]
 
