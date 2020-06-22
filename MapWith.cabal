@@ -42,7 +42,7 @@ executable perf-prev-next-baseline
   main-is:             PrevNextBaseline.hs
   ghc-options:         -O2
                        -fprof-auto
-                       "-with-rtsopts=-hd -p"
+                       "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
 
 executable perf-ind-end-baseline
@@ -51,7 +51,7 @@ executable perf-ind-end-baseline
   main-is:             IndEndBaseline.hs
   ghc-options:         -O2
                        -fprof-auto
-                       "-with-rtsopts=-hd -p"
+                       "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
 
 executable perf-prev-next
@@ -60,7 +60,7 @@ executable perf-prev-next
   main-is:             PrevNext.hs
   ghc-options:         -O2
                        -fprof-auto
-                       "-with-rtsopts=-hd -p"
+                       "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
   Other-modules:       MapWith
 
@@ -70,6 +70,6 @@ executable perf-ind-end
   main-is:             IndEnd.hs
   ghc-options:         -O2
                        -fprof-auto
-                       "-with-rtsopts=-hd -p"
+                       "-with-rtsopts=-hd -P"
   build-depends:       base >= 4.5 && < 5
   Other-modules:       MapWith
