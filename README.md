@@ -12,7 +12,7 @@ Use of a simple APIs:
 
 Or a "custom built" injection of various parameters:
 
-    mapWith ((,,,,) $-> limIt <-* ixIt *-> adjElt <-* zipIt "hello") "abc"
+    mapWith ((,,,,) $-> isLim <-* eltIx *-> adjElt <-* eltFrom "hello") "abc"
     == [('a',True,2,Nothing,'l'),('b',False,1,Just 'a','e'),('c',False,0,Just 'b','h')]
 
 # Usage
@@ -41,17 +41,17 @@ The first op has to be $-> or <-$. Subsequent ones must be \*-> or <-\*
 
 $-> and \*-> mean "from the left", <-$ and <-\* mean "from the right"
 
-    f $-> limIt
+    f $-> isLim
   
 injects a True for the first element, then False for the rest.
 
-    f <-$ limIt
+    f <-$ isLim
   
 injects a True for the last element.
 
 Other injectors:
-* ixIt: the 0-based index from the start or end
-* zipIt l: the nth element from l.
+* eltIx: the 0-based index from the start or end
+* eltFrom l: the nth element from l.
 * adjElt: the adjacent element. With $-> essentially gives the previous element, <-$ gives the next.
 
 ## Custom Injectors
@@ -73,7 +73,7 @@ And I've not found good ways to do them (yet) either.
 
 Something a bit like this, so I don't need different operators at the start:
 
-    mapWith (f *-> limIr *-> ixIt) l
+    mapWith (f *-> limIr *-> eltIx) l
 
     class Mapper m where
       (*->) :: (m a l r (l' -> b)) -> Injector a l' -> MapPlan a (l, l') r b

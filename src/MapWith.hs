@@ -34,10 +34,10 @@ module MapWith
   , (<-^)
 
   -- * Predefined Injectors
-  , limIt
+  , isLim
   , adjElt
-  , ixIt
-  , zipIt
+  , eltIx
+  , eltFrom
 
   -- * Custom Injectors
   , Injector(..)
@@ -108,29 +108,29 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --
 --  > prev2Inj = Injector (\x i@(prev1May, prev2May) -> (i, (Just x, prev1May))) (Nothing, Nothing)
 
-pairIt :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
-pairIt (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
+injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
+injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
   where
-  nxt a ~(s1, s2) = let (i1, s1') = n1 a s1       -- !! NOTE THE ~ !! It allows "constant" iterators (e.g. limIt), and hence e.g. andFirstLast to work on infinite lists.
+  nxt a ~(s1, s2) = let (i1, s1') = n1 a s1       -- !! NOTE THE ~ !! It allows "constant" injectors (e.g. isLim), and hence e.g. andFirstLast to work on infinite lists.
                         (i2, s2') = n2 a s2
                     in ((i1, i2), (s1', s2'))
 
-limIt :: Injector a Bool
-limIt = Injector (\_ i -> (i, False)) True
+isLim :: Injector a Bool
+isLim = Injector (\_ i -> (i, False)) True
 -- ^ from the left: inject 'True' for the first element, else inject 'False'.
 --
 --   from the right: inject 'True' for the last element, else inject 'False'.
 
-ixIt :: Integral i => Injector a i
-ixIt = Injector (\_ i -> (i, i+1)) 0
+eltIx :: Integral i => Injector a i
+eltIx = Injector (\_ i -> (i, i+1)) 0
 -- ^ from the left: inject the index of the element from the start (the first element is 0).
 --
 --   from the right: inject the index of the element from the left (the last element is 0).
 
-zipIt :: Foldable f
+eltFrom :: Foldable f
       => f i          -- ^ The elements to inject. There must be enough elements.
       -> Injector a i --unsafe if we run off the end
-zipIt f = Injector (\_ x -> (head x, tail x)) (toList f)
+eltFrom f = Injector (\_ x -> (head x, tail x)) (toList f)
 -- ^ Inject each given element in turn.
 --
 -- from the left: the first element will be injected for the first item in the Traversable.
@@ -139,7 +139,7 @@ zipIt f = Injector (\_ x -> (head x, tail x)) (toList f)
 --
 -- As a result of lazyness, it is not always an error if there are not enough elements, for example:
 --
--- >>> drop 1 $ mapWith ((\_ i -> i) <-^ zipIt [8,2]) "abc"
+-- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
 
 adjElt :: Injector a (Maybe a)
@@ -155,7 +155,7 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 -- In general, a map function will take one parameter from the Traversable, then one each from any number of injectors. For example:
 --
 -- >>> mapFn w x y z = (w, x, y, z)
--- >>> injectedFn = mapFn <-^ limIt ^-> ixIt <-^ zipIt [8,2,7,1]
+-- >>> injectedFn = mapFn <-^ isLim ^-> eltIx <-^ eltFrom [8,2,7,1]
 -- >>> mapWith injectedFn "abc"
 -- [('a',False,0,7),('b',False,1,2),('c',True,2,8)]
 --
@@ -164,9 +164,9 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 -- - @mapFn@: a function that maps over a structure, but requires additional parameters
 -- - @injectedFn@: represents the combination of @mapFn@ with three injectors that provide the required parameters:
 --
---     - @'<-^' 'limIt'@: injects True if this is the limit, from the right (i.e. the last element).
---     - @'^->' 'ixIt'@: inject the position, from the left
---     - @'<-^' 'zipIt' [8,9,10,11]@: inject elements from this list, from the right.
+--     - @'<-^' 'isLim'@: injects True if this is the limit, from the right (i.e. the last element).
+--     - @'^->' 'eltIx'@: inject the position, from the left
+--     - @'<-^' 'eltFrom' [8,9,10,11]@: inject elements from this list, from the right.
 --
 -- 'mapWith' then maps the @mapFn@ over the structure, with the following parameters:
 --
@@ -237,19 +237,19 @@ instance Injectable (->) where
   f <-^ itR' = InjectedFnR (\a   r -> f a r)        itR'
 
 instance Injectable InjectedFn where
-  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (pairIt itL itL')
+  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
   InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r l')         itL'              itR
-  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (pairIt itL itL')         itR
+  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (injPair itL itL')         itR
 
   InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r')         itL                   itR'
-  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                   (pairIt itR itR')
-  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')         itL       (pairIt itR itR')
+  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                   (injPair itR itR')
+  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')         itL       (injPair itR itR')
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
 
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
-withFirstLast f = mapWith $ f ^-> limIt <-^ limIt
+withFirstLast f = mapWith $ f ^-> isLim <-^ isLim
 -- ^ Maps over a Traversable, with additional parameters indicating whether an element is the first or last (or both) in the list.
 --
 -- >>> let f x isFirst isLast = star isFirst ++ x ++ star isLast; star b = if b then "*" else "" in withFirstLast f ["foo", "bar", "baz"]

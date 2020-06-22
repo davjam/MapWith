@@ -8,4 +8,4 @@ main = do
   xxx n nEndInd = n + nEndInd
 
 withEndIx :: Traversable t => (a -> Int -> b) -> t a -> t b
-withEndIx f = mapWith $ f <-^ ixIt
+withEndIx f = mapWith $ f <-^ eltIx
