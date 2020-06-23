@@ -1,5 +1,5 @@
 # MapWith
-mapWith: like fmap, but can "inject" additional arguments such as whether first (or last) element, etc.
+`mapWith`: like `fmap`, but can "inject" additional arguments such as whether first (or last) element, etc.
 
 # Background
 
@@ -8,7 +8,7 @@ I often want to map over a list, but do something slightly different with the fi
 For a long time I used [markbounds](https://stackoverflow.com/questions/14114011/haskell-map-operation-with-different-first-and-last-functions#answer-53282575),
 but also wanted something that:
 
-- works on structures other than lists (mapWith works on all Traversables)
+- works on structures other than lists (`mapWith` works on all `Traversable` types)
 - can provide additional types of attributes (not just first/last), such as:
   - index from start/end
   - the previous/next element
@@ -25,7 +25,7 @@ mapWith ((,) <-^ isLim) "abc"
 [('a',False),('b',False),('c',True)]
 ```
 
-More examples are [here](doc/examples.hs)
+More examples are [here](doc/examples.hs).
 
 # Questions/Doubts
 
@@ -35,11 +35,11 @@ Some things I wonder:
 
 - Doesn't this already exist? (It feels like it should!)
 - Is this useful enough to be a separate library?
-- Should I name it Data.Traversable.MapWith? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
+- Should I name it `Data.Traversable.MapWith`? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
 - Is the code/documentation clear enough?
-- Should I export the Injectable class and InjectedFn constructor?
+- Should I export the `Injectable` class and `InjectedFn` constructor?
   (I don't think it would be possible to create new instances anyway.)
-  Not exporting them leaves an annoying warning when I build the documentation, and doesn't create a hyperlink for Injectable.
+  Not exporting them leaves an annoying warning when I build the documentation, and doesn't create a hyperlink for `Injectable`.
 - Should I make up loads more Injectors, or leave that for anyone who uses the library?
 
 # Performance
