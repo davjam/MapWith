@@ -42,6 +42,10 @@ tests =
   , andFirstLast "abc"                  == [('a',True,False),('b',False,False),('c',False,True)]
   , take 3 (andFirstLast [1..])         == [(1,True,False),(2,False,False),(3,False,False)]
   , andFirstLast (FunnySet 8 9 1 2 5)   == FunnySet (8,True,False) (9,False,False) (1,False,False) (2,False,False) (5,False,True)
+  , mapWith (testFn0 <-^ eltFromMay [1,2]) [1,2,3]
+                                        == [Nothing, Just 2, Just 1]
+  , mapWith (testFn0 <-^ eltFromDef 7 [1,2]) [1,2,3]
+                                        == [7, 2, 1]
 
   ]
 

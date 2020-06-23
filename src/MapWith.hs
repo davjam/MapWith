@@ -8,7 +8,7 @@
 -- License     : BSD3
 -- Stability   : Experimental
 --
--- Provides fmap-like functionality, but can also "inject" additional parameters to the mapping function, such as:
+-- Provides 'fmap'-like functionality, but can also "inject" additional parameters to the mapping function, such as:
 --
 -- * whether the first / last element
 -- * the previous / next element
@@ -40,6 +40,8 @@ module MapWith
   , adjElt
   , eltIx
   , eltFrom
+  , eltFromMay
+  , eltFromDef
 
   -- * Custom Injectors
   , Injector(..)
@@ -131,18 +133,30 @@ eltIx = Injector (\_ i -> (i, i+1)) 0
 
 eltFrom :: Foldable f
       => f i          -- ^ The elements to inject. There must be enough elements.
-      -> Injector a i --unsafe if we run off the end
-eltFrom f = Injector (\_ x -> (head x, tail x)) (toList f)
+      -> Injector a i
+eltFrom f = Injector (\_ (sh:st) -> (sh, st)) (toList f)
 -- ^ Inject each given element in turn.
 --
 -- from the left: the first element will be injected for the first item in the Traversable.
 --
 -- from the right: the first element will be injected for the last item in the Traversable.
 --
--- As a result of lazyness, it is not always an error if there are not enough elements, for example:
+-- As a result of laziness, it is not always an error if there are not enough elements, for example:
 --
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
+
+eltFromMay :: Foldable f => f i -> Injector a (Maybe i)
+eltFromMay f = Injector (\_ s -> case s of []      -> (Nothing, [])
+                                           (sh:st) -> (Just sh, st))
+                         (toList f)
+-- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
+
+eltFromDef :: Foldable f => i -> f i -> Injector a i
+eltFromDef def f = Injector (\_ s -> case s of []      -> (def, [])
+                                               (sh:st) -> (sh, st))
+                            (toList f)
+-- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 
 adjElt :: Injector a (Maybe a)
 adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
@@ -205,15 +219,11 @@ mapWithM :: (Traversable t, Monad m) => InjectedFn a (m b) -> t a -> m (t b)
 mapWithM f = sequence . mapWith f
 
 -- ^ like 'mapM', but with an 'InjectedFn'.
---
--- > mapWithM f = sequence . mapWith f
 
 mapWithM_ :: (Traversable t, Monad m) => InjectedFn a (m b) -> t a -> m ()
 mapWithM_ f = sequence_ . mapWith f
 
 -- ^ like 'mapM_' (which is like 'mapM' but ignores the results), but with an 'InjectedFn'.
---
--- > mapWithM_ f = sequence_ . mapWith f
 
 data InjectedFn a b
   = forall l r. InjectedFnLR (a -> l -> r -> b) (Injector a l) (Injector a r)
@@ -277,7 +287,7 @@ withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
 withPrevNext f = mapWith $ f ^-> adjElt <-^ adjElt
 -- ^ Maps over a Traversable, with additional parameters indicating the previous and next elements.
 --
--- The second (or third) param to the map function is 'Nothing' when called for the first (or last) item, otherwise it's 'Just' the previous (or next) item.
+-- The second (or third) parameter to the map function is 'Nothing' when called for the first (or last) item, otherwise it's 'Just' the previous (or next) item.
 --
 -- >>> let f x prvMay nxtMay = maybe "*" (cmp x) prvMay ++ x ++ maybe "*" (cmp x) nxtMay; cmp x y = show $ compare x y in withPrevNext f ["foo", "bar", "baz"]
 -- ["*fooGT","LTbarLT","GTbaz*"]
