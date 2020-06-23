@@ -36,6 +36,7 @@ Some things I wonder:
 - Doesn't this already exist? (It feels like it should!)
 - Is this useful enough to be a separate library?
 - Should I name it `Data.Traversable.MapWith`? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
+- Is `build-depends: base >= 4 && < 5` OK? It seems quite broad. (I currently have 4.11.1.0 but cabal says the default available is 4.14.0.0). I also use GHC 8.4.3. Is that "too old"?
 - Is the code/documentation clear enough?
 - Should I export the `Injectable` class and `InjectedFn` constructor?
   (I don't think it would be possible to create new instances anyway.)
