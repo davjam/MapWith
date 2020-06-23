@@ -1,75 +1,68 @@
 name:                MapWith
 version:             0.1.0.0
 
-synopsis:            mapWith: like fmap, but can "inject" additional arguments such as whether first (or last) element, etc.
+synopsis:            mapWith: like fmap, but can "inject" additional arguments (first/last/etc).
+category:            Combinators  --maybe??
+maintainer:          dj112358@outlook.com
 
--- description:
+description:         fmap over Traversables, with additional params of different types (first/last, prev/next element, index from start/end, custom params).
+                     for examples see https://github.com/davjam/MapWith/blob/master/doc/examples.hs
 
 license:             BSD3
 license-file:        LICENSE
 author:              David James
+copyright:           (c) David James, 2020.
 
 build-type:          Simple
+tested-with:         GHC == 8.4.3
 extra-source-files:  ChangeLog.md
 
--- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+source-repository head
+  type:              git
+  location:          https://github.com/davjam/MapWith.git
+
 library
+  exposed-modules:     MapWith
   hs-source-dirs:      src
-  default-language:    Haskell2010
-  build-depends:       base >= 4 && < 5
   ghc-options:         -Wall
   other-extensions:    ExistentialQuantification
-
-  exposed-modules:     MapWith
-
-  -- Modules included in this library but not exported.
-  -- other-modules:
+  default-language:    Haskell2010
+  build-depends:       base >= 4 && < 5
 
 Test-Suite test-MapWith
+  main-is:             MapWithTest.hs
+  Other-modules:       MapWith
   type:                exitcode-stdio-1.0
   hs-source-dirs:      src test
   default-language:    Haskell2010
   build-depends:       base >= 4 && < 5
-  main-is:             MapWithTest.hs
-  
-  Other-modules:       MapWith
 
-executable perf-prev-next-baseline
-  default-language:    Haskell2010
-  hs-source-dirs:      perf
+executable perf-prev-next-baseline        --cabal run perf-prev-next-baseline -- +RTS -P -hd
+                                          --see https://stackoverflow.com/questions/22942194/profiling-an-executable-with-cabal
   main-is:             PrevNextBaseline.hs
-  ghc-options:         -O2
-                       -fprof-auto
-                       "-with-rtsopts=-hd -P"
-  build-depends:       base >= 4.5 && < 5
-
-executable perf-ind-end-baseline
-  default-language:    Haskell2010
   hs-source-dirs:      perf
+  default-language:    Haskell2010        
+  build-depends:       base >= 4.5 && < 5
+
+executable perf-ind-end-baseline          --cabal run perf-ind-end-baseline -- +RTS -P -hd
   main-is:             IndEndBaseline.hs
-  ghc-options:         -O2
-                       -fprof-auto
-                       "-with-rtsopts=-hd -P"
+  hs-source-dirs:      perf
+  default-language:    Haskell2010
   build-depends:       base >= 4.5 && < 5
 
-executable perf-prev-next
-  default-language:    Haskell2010
-  hs-source-dirs:      src perf
+executable perf-prev-next                 --cabal run perf-prev-next -- +RTS -P -hd
   main-is:             PrevNext.hs
-  ghc-options:         -O2
-                       -fprof-auto
-                       "-with-rtsopts=-hd -P"
-  build-depends:       base >= 4.5 && < 5
   Other-modules:       MapWith
-
-executable perf-ind-end
-  default-language:    Haskell2010
   hs-source-dirs:      src perf
-  main-is:             IndEnd.hs
-  ghc-options:         -O2
-                       -fprof-auto
-                       "-with-rtsopts=-hd -P"
+  default-language:    Haskell2010
   build-depends:       base >= 4.5 && < 5
+
+executable perf-ind-end                   --cabal run perf-ind-end -- +RTS -P -hd
+  main-is:             IndEnd.hs
   Other-modules:       MapWith
+  hs-source-dirs:      src perf
+  default-language:    Haskell2010
+  build-depends:       base >= 4.5 && < 5
+ 
