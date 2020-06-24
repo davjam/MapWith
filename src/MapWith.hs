@@ -60,6 +60,7 @@ where
 import Data.Foldable (fold, toList)
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
+import Control.Exception (assert)
 
 -- $TypeNames
 -- These 'names' are used for types and variables throughout:
@@ -153,7 +154,7 @@ eltIx = Injector (\_ i -> (i, i+1)) 0
 eltFrom :: Foldable f
       => f i          -- ^ The elements to inject. There must be enough elements.
       -> Injector a i
-eltFrom f = Injector (\_ (sh:st) -> (sh, st)) (toList f)
+eltFrom f = Injector (\_ s -> assert (not $ null s) (head s, tail s)) (toList f)
 -- ^ Inject each given element in turn:
 --
 -- - from the left: the first element will be injected for the first item in the Traversable.
