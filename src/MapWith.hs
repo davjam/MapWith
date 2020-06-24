@@ -157,8 +157,8 @@ eltFrom :: Foldable f
 eltFrom f = Injector (\_ s -> assert (not $ null s) (head s, tail s)) (toList f)
 -- ^ Inject each given element in turn:
 --
--- - from the left: the first element will be injected for the first item in the Traversable.
--- - from the right: the first element will be injected for the last item in the Traversable.
+-- - from the left: the first element will be injected for the first item in the 'Traversable'.
+-- - from the right: the first element will be injected for the last item in the 'Traversable'.
 --
 -- As a result of laziness, it is not always an error if there are not enough elements, for example:
 --
@@ -202,7 +202,7 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 --
 --     - @'<-^' 'isLim'@: injects True if this is the limit, from the right (i.e. the last item).
 --     - @'^->' 'eltIx'@: inject the index, from the left
---     - @'<-^' 'eltFrom' [8,9,10,11]@: inject elements from this list, from the right.
+--     - @'<-^' 'eltFrom' [8,2,7,1]@: inject elements from this list, from the right.
 --
 -- 'mapWith' then maps the @mapFn@ over the 'Traversable', with the following parameters:
 --
@@ -328,7 +328,7 @@ nextElt f = f <-^ adjElt
 
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
 withFirstLast f = mapWith $ f & isFirst & isLast
--- ^ Maps over a Traversable, with additional parameters indicating whether an item is the first or last (or both) in the list.
+-- ^ Maps over a 'Traversable', with additional parameters indicating whether an item is the first or last (or both) in the list.
 --
 -- >>> let f x isFirst isLast = star isFirst ++ x ++ star isLast; star b = if b then "*" else "" in withFirstLast f ["foo", "bar", "baz"]
 -- ["*foo", "bar", "baz*"]
@@ -339,7 +339,7 @@ andFirstLast = withFirstLast (,,)
 
 withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
 withPrevNext f = mapWith $ f & prevElt & nextElt
--- ^ Maps over a Traversable, with additional parameters indicating the previous and next elements.
+-- ^ Maps over a 'Traversable', with additional parameters indicating the previous and next elements.
 --
 -- The second (or third) parameter to the map function is 'Nothing' when called for the first (or last) item, otherwise it's 'Just' the previous (or next) item.
 --
