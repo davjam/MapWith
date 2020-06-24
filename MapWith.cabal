@@ -29,7 +29,8 @@ library
   ghc-options:         -Wall
   other-extensions:    ExistentialQuantification
   default-language:    Haskell2010
-  build-depends:       base >= 4 && < 5
+  build-depends:       base >= 4.11.1 && < 4.15
+  --I know it works on 4.11.1. I believe suspect it will work on 4.14, based on the documentation (e.g. https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-List.html#v:mapAccumL)
 
 Test-Suite test-MapWith
   main-is:             MapWithTest.hs
@@ -37,32 +38,32 @@ Test-Suite test-MapWith
   type:                exitcode-stdio-1.0
   hs-source-dirs:      src test
   default-language:    Haskell2010
-  build-depends:       base >= 4 && < 5
+  build-depends:       base
 
 executable perf-prev-next-baseline        --cabal run perf-prev-next-baseline -- +RTS -P -hd
                                           --see https://stackoverflow.com/questions/22942194/profiling-an-executable-with-cabal
   main-is:             PrevNextBaseline.hs
   hs-source-dirs:      perf
   default-language:    Haskell2010        
-  build-depends:       base >= 4.5 && < 5
+  build-depends:       base
 
 executable perf-ind-end-baseline          --cabal run perf-ind-end-baseline -- +RTS -P -hd
   main-is:             IndEndBaseline.hs
   hs-source-dirs:      perf
   default-language:    Haskell2010
-  build-depends:       base >= 4.5 && < 5
+  build-depends:       base
 
 executable perf-prev-next                 --cabal run perf-prev-next -- +RTS -P -hd
   main-is:             PrevNext.hs
   Other-modules:       MapWith
   hs-source-dirs:      src perf
   default-language:    Haskell2010
-  build-depends:       base >= 4.5 && < 5
+  build-depends:       base
 
 executable perf-ind-end                   --cabal run perf-ind-end -- +RTS -P -hd
   main-is:             IndEnd.hs
   Other-modules:       MapWith
   hs-source-dirs:      src perf
   default-language:    Haskell2010
-  build-depends:       base >= 4.5 && < 5
+  build-depends:       base
  
