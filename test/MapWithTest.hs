@@ -2,8 +2,9 @@
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
 
-import MapWith
 import System.Exit
+import Data.Function ((&))
+import MapWith
 
 testFn0 :: a -> b -> b
 testFn0 _ b = b
@@ -33,12 +34,12 @@ data FunnySet a = FunnySet a a a a a
 tests :: [Bool]
 tests =
   [
-    mapWith (testFn0 ^-> isLim) "abc"   == [True,  False, False]
-  , mapWith (testFn0 <-^ isLim) "abc"   == [False, False, True ]
+    mapWith (testFn0 & isFirst) "abc"   == [True,  False, False]
+  , mapWith (testFn0 & isLast) "abc"   == [False, False, True ]
   , mapWith ((\_ a b c d -> (a,b,c,d)) <-^ isLim ^-> eltIx <-^ eltIx ^-> isLim) "abc"
                                         == [(False,0,2,True),(False,1,1,False),(True,2,0,False)]
-  , mapWith (testFn0 ^-> adjElt) "abc"  == [Nothing, Just 'a', Just 'b']
-  , mapWith (testFn0 <-^ adjElt) "abc"  == [Just 'b', Just 'c', Nothing]
+  , mapWith (testFn0 & prevElt) "abc"  == [Nothing, Just 'a', Just 'b']
+  , mapWith (testFn0 & nextElt) "abc"  == [Just 'b', Just 'c', Nothing]
   , andFirstLast "abc"                  == [('a',True,False),('b',False,False),('c',False,True)]
   , take 3 (andFirstLast [1..])         == [(1,True,False),(2,False,False),(3,False,False)]
   , andFirstLast (FunnySet 8 9 1 2 5)   == FunnySet (8,True,False) (9,False,False) (1,False,False) (2,False,False) (5,False,True)

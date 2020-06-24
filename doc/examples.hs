@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
 
-import Data.Foldable (fold)
+import Data.Function ((&))
 import MapWith
 
 data MyTraversable a = MyTraversable a a a a
@@ -12,7 +12,7 @@ data MyTraversable a = MyTraversable a a a a
 --Use of pre-packaged withFirstLast.
 
 listThings :: Traversable t => t String -> String
-listThings = fold . withFirstLast listThing
+listThings = foldMapWith $ listThing & isFirst & isLast
   where
   listThing thing True _    =            thing
   listThing thing _    True = " and " ++ thing
