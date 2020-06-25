@@ -291,12 +291,12 @@ instance Injectable (->) where
 
 instance Injectable InjectedFn where
   InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
-  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r l')         itL'              itR
-  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (injPair itL itL')         itR
+  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r l')          itL'            itR
+  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (injPair itL itL')       itR
 
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r')         itL                   itR'
-  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                   (injPair itR itR')
-  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')         itL       (injPair itR itR')
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r')          itL                 itR'
+  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                 (injPair itR itR')
+  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')          itL    (injPair itR itR')
 
 -- $PrecombinedInjectors
 -- These are combinations of '^->' or '<-^' with 'isLim' or 'adjElt'.

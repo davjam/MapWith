@@ -1,13 +1,11 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 
 import Data.Function ((&))
 import MapWith
 
+--An example Traversable used in the examples below.
 data MyTraversable a = MyTraversable a a a a
   deriving (Eq, Show, Functor, Foldable, Traversable)
-
 
 --Use of pre-packaged withFirstLast.
 
