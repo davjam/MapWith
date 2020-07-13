@@ -15,7 +15,7 @@ author:              David James
 copyright:           (c) David James, 2020.
 
 build-type:          Simple
-tested-with:         GHC == 8.4.3
+tested-with:         GHC == 8.0.2, GHC == 8.4.3, GHC == 8.8.3
 extra-source-files:  ChangeLog.md
 
 cabal-version:       >=1.10
@@ -30,7 +30,7 @@ library
   ghc-options:         -Wall
   other-extensions:    ExistentialQuantification
   default-language:    Haskell2010
-  build-depends:       base >= 4.11.1 && < 4.15
+  build-depends:       base >= 4.9.1 && < 4.15
   --I know it works on 4.11.1. I believe suspect it will work on 4.14, based on the documentation (e.g. https://hackage.haskell.org/package/base-4.14.0.0/docs/Data-List.html#v:mapAccumL)
 
 Test-Suite test-MapWith
