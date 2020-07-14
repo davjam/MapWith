@@ -44,6 +44,7 @@ module MapWith
   , eltFrom
   , eltFromMay
   , eltFromDef
+  , eltFromCycle
   
   -- ** Pre-Combined Injectors
   -- $PrecombinedInjectors
@@ -58,6 +59,7 @@ module MapWith
 where
 
 import Data.Foldable (fold)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
@@ -175,6 +177,12 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (def, [])
                                                i:ix -> (i, ix))
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
+
+eltFromCycle :: NonEmpty i -> Injector a i
+eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (i, l)
+                                             i :| y:yx -> (i, y :| yx))
+                          l
+-- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
 
 adjElt :: Injector a (Maybe a)
 adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing

@@ -4,6 +4,7 @@
 
 import System.Exit
 import Data.Function ((&))
+import Data.List.NonEmpty (NonEmpty(..), fromList)
 import MapWith
 
 testFn0 :: a -> b -> b
@@ -47,11 +48,13 @@ tests =
                                         == [Nothing, Just 2, Just 1]
   , mapWith (testFn0 <-^ eltFromDef 7 [1,2]) [1,2,3]
                                         == [7, 2, 1]
+  , mapWith (testFn0 ^-> eltFromCycle (fromList "abc")) [1,2,3,4,5]
+                                        == "abcab"
+  , mapWith (testFn0 ^-> eltFromCycle (fromList "a")) [1,2,3,4,5]
+                                        == "aaaaa"
 
   ]
 
-main = do
-  if and tests
-  then exitSuccess
-  else exitFailure
+main | and tests = exitSuccess
+     | otherwise = exitFailure
 
