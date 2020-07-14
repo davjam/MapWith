@@ -57,7 +57,7 @@ module MapWith
   )
 where
 
-import Data.Foldable (fold, toList)
+import Data.Foldable (fold)
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
@@ -151,10 +151,9 @@ eltIx = Injector (\_ i -> (i, i+1)) 0
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 
-eltFrom :: Foldable f
-      => f i          -- ^ The elements to inject. There must be enough elements.
-      -> Injector a i
-eltFrom f = Injector (\_ s -> assert (not $ null s) (head s, tail s)) (toList f)
+eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
+        -> Injector a i
+eltFrom l = Injector (\_ s -> assert (not $ null s) (head s, tail s)) l
 -- ^ Inject each given element in turn:
 --
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
@@ -165,16 +164,16 @@ eltFrom f = Injector (\_ s -> assert (not $ null s) (head s, tail s)) (toList f)
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
 
-eltFromMay :: Foldable f => f i -> Injector a (Maybe i)
-eltFromMay f = Injector (\_ s -> case s of []      -> (Nothing, [])
-                                           (sh:st) -> (Just sh, st))
-                         (toList f)
+eltFromMay :: [i] -> Injector a (Maybe i)
+eltFromMay l = Injector (\_ s -> case s of []   -> (Nothing, [])
+                                           i:ix -> (Just i, ix))
+                         l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
 
-eltFromDef :: Foldable f => i -> f i -> Injector a i
-eltFromDef def f = Injector (\_ s -> case s of []      -> (def, [])
-                                               (sh:st) -> (sh, st))
-                            (toList f)
+eltFromDef :: i -> [i] -> Injector a i
+eltFromDef def l = Injector (\_ s -> case s of []   -> (def, [])
+                                               i:ix -> (i, ix))
+                            l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 
 adjElt :: Injector a (Maybe a)
