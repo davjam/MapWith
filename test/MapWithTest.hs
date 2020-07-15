@@ -52,7 +52,7 @@ tests =
                                         == "abcab"
   , mapWith (testFn0 ^-> eltFromCycle (fromList "a")) [1,2,3,4,5]
                                         == "aaaaa"
-
+  , mapWith (testFn0 & isEven) "abcdef" == [True,False,True,False,True,False]
   ]
 
 main | and tests = exitSuccess

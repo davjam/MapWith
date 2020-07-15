@@ -52,6 +52,7 @@ module MapWith
   , isLast
   , prevElt
   , nextElt
+  , isEven
 
   -- * Custom Injectors
   , Injector(..)
@@ -59,7 +60,7 @@ module MapWith
 where
 
 import Data.Foldable (fold)
-import Data.List.NonEmpty (NonEmpty(..))
+import Data.List.NonEmpty (NonEmpty(..), fromList)
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
@@ -135,7 +136,8 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
                     in ((i1, i2), (s1', s2'))
 
 -- $PredefinedInjectors
--- Use these (or custom 'Injector's) to create 'InjectedFn's that can be used with 'mapWith'
+-- 
+-- #PredefinedInjectors#Use these (or custom 'Injector's) to create 'InjectedFn's that can be used with 'mapWith'
 
 isLim :: Injector a Bool
 isLim = Injector (\_ i -> (i, False)) True
@@ -306,7 +308,7 @@ instance Injectable InjectedFn where
   InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')          itL    (injPair itR itR')
 
 -- $PrecombinedInjectors
--- These are combinations of '^->' or '<-^' with 'isLim' or 'adjElt'.
+-- These are combinations of '^->' or '<-^' with [pre-defined injectors](#PredefinedInjectors).
 --
 -- They work well with the '&' operator, and can be combined with the '^->' and '<-^' operators e.g.:
 --
@@ -329,6 +331,10 @@ prevElt f = f ^-> adjElt
 nextElt :: Injectable f => f a (Maybe a -> b) -> InjectedFn a b
 nextElt f = f <-^ adjElt
 -- ^ 'adjElt', from the right.
+
+isEven :: Injectable f => f a (Bool -> b) -> InjectedFn a b
+isEven f = f ^-> eltFromCycle (fromList [True, False])
+-- ^ True if an even-numbered (0th, 2nd, 4th, etc) item.
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
