@@ -8,6 +8,7 @@ maintainer:          dj112358@outlook.com
 description:         fmap over Traversables (including lists), but pass additional parameters to the map function, such as
                      isFirst, isLast, prevElt, nextElt, index from start or end, custom params.
                      For examples see https://github.com/davjam/MapWith/blob/master/doc/examples.hs
+homepage:            https://github.com/davjam/MapWith#readme
 
 license:             BSD3
 license-file:        LICENSE
