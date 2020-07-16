@@ -53,6 +53,9 @@ tests =
   , mapWith (testFn0 ^-> eltFromCycle (fromList "a")) [1,2,3,4,5]
                                         == "aaaaa"
   , mapWith (testFn0 & isEven) "abcdef" == [True,False,True,False,True,False]
+  , mapWith (testFn0 ^-> foldl1Elts (-)   ) [9, 1, 8] == [ 9,  8, 0]
+  , mapWith (testFn0 <-^ foldl1Elts (-)   ) [9, 1, 8] == [-2,  7, 8]
+  , mapWith (testFn0 ^-> foldlElts  (-) 20) [9, 1, 8] == [11, 10, 2] 
   ]
 
 main | and tests = exitSuccess
