@@ -68,7 +68,7 @@ import Data.Function ((&))
 import Control.Exception (assert)
 
 -- $TypeNames
--- These 'names' are used for types and variables throughout:
+-- These names are used for types and variables throughout:
 --
 -- [@t@]: the 'Traversable' we're mapping over
 -- [@a@]: the value in the input 'Traversable'
@@ -126,7 +126,7 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --
 --  More usefully, this would allow for e.g. the prior two elements:
 --
---  > prev2Inj = Injector (\x i@(prev1May, prev2May) -> (i, (Just x, prev1May))) (Nothing, Nothing)
+--  > prev2Inj = Injector (\x i@(prev1May, _) -> (i, (Just x, prev1May))) (Nothing, Nothing)
 --
 -- or random values, etc.
 
