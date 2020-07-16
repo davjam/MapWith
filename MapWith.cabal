@@ -16,7 +16,7 @@ author:              David James
 copyright:           (c) David James, 2020.
 
 build-type:          Simple
-tested-with:         GHC == 8.0.2, GHC == 8.4.3, GHC == 8.8.3
+tested-with:         GHC==8.0.2, GHC==8.4.3, GHC==8.8.3, GHC==8.10.1
 extra-source-files:  ChangeLog.md
 
 cabal-version:       >=1.10
