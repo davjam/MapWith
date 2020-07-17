@@ -76,8 +76,8 @@ import Control.Exception (assert)
 -- [@i@]: an output from an 'Injector', injected into a map function
 -- [@s@]: the internal state in an 'Injector'
 
---XXXX I'd like to add separate comments for each argument, but that's not supported to GHC 8.6 https://github.com/haskell/haddock/issues/836#issuecomment-391402361
-data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argument is a generate function, the second argument is the initial state.
+--XXXX I'd like to add separate comments for each parameter, but that's not supported to GHC 8.6 https://github.com/haskell/haddock/issues/836#issuecomment-391402361
+data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parameter is a generate function, the second parameter is the initial state.
 
 -- ^ Injectors have an initial state and a generate function.
 --
@@ -149,6 +149,11 @@ isLim = Injector (\_ i -> (i, False)) True
 -- - from the right: if it's the last item
 --
 -- else inject False.
+--
+-- >>> mapWith ((\a b -> [a,if b then '*' else ' ']) ^-> isLim) "12345"
+-- ["1*","2 ","3 ","4 ","5 "]
+-- >>> mapWith ((\a b -> [a,if b then '*' else ' ']) <-^ isLim) "12345"
+-- ["1 ","2 ","3 ","4 ","5*"]
 
 eltIx :: Integral i => Injector a i
 eltIx = Injector (\_ i -> (i, i+1)) 0
@@ -156,6 +161,11 @@ eltIx = Injector (\_ i -> (i, i+1)) 0
 --
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
+--
+-- >>> mapWith ((\a b -> [a,head $ show b]) ^-> eltIx) "freddy"
+-- ["f0","r1","e2","d3","d4","y5"]
+-- >>> mapWith ((\a b -> [a,head $ show b]) <-^ eltIx) "freddy"
+-- ["f5","r4","e3","d2","d1","y0"]
 
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
         -> Injector a i
@@ -164,6 +174,11 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (head s, tail s)) l
 --
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
 -- - from the right: the first element will be injected for the last item in the 'Traversable'.
+--
+-- >>> mapWith ((\a b -> [a,b]) ^-> eltFrom "bill") "sue"
+-- ["sb","ui","el"]
+-- >>> mapWith ((\a b -> [a,b]) <-^ eltFrom "bill") "sue"
+-- ["sl","ui","eb"]
 --
 -- As a result of laziness, it is not always an error if there are not enough elements, for example:
 --
@@ -175,18 +190,33 @@ eltFromMay l = Injector (\_ s -> case s of []   -> (Nothing, [])
                                            i:ix -> (Just i, ix))
                          l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
+--
+-- >>> mapWith ((\a b -> [a,maybe '-' id b]) ^-> eltFromMay "ben") "sally"
+-- ["sb","ae","ln","l-","y-"]
+-- >>> mapWith ((\a b -> [a,maybe '-' id b]) <-^ eltFromMay "ben") "sally"
+-- ["s-","a-","ln","le","yb"]
 
 eltFromDef :: i -> [i] -> Injector a i
 eltFromDef def l = Injector (\_ s -> case s of []   -> (def, [])
                                                i:ix -> (i, ix))
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
+--
+-- >>> mapWith ((\a b -> [a,b]) ^-> eltFromDef 'X' "ben") "sally"
+-- ["sb","ae","ln","lX","yX"]
+-- >>> mapWith ((\a b -> [a,b]) <-^ eltFromDef 'X' "ben") "sally"
+-- ["sX","aX","ln","le","yb"]
 
 eltFromCycle :: NonEmpty i -> Injector a i
 eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (i, l)
                                              i :| y:yx -> (i, y :| yx))
                           l
 -- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
+--
+-- >>> mapWith ((\a b -> [a,b]) ^-> eltFromCycle (fromList "!?#")) "sally"
+-- ["s!","a?","l#","l!","y?"]
+-- >>> mapWith ((\a b -> [a,b]) <-^ eltFromCycle (fromList "!?#")) "sally"
+-- ["s?","a!","l#","l?","y!"]
 
 adjElt :: Injector a (Maybe a)
 adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
@@ -196,6 +226,11 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 -- - from the right: the next item, except for the last item. (The "previous from the right" is the "next".)
 --
 -- inject 'Nothing' if there is no adjacent item (i.e. for the first / last).
+--
+-- >>> mapWith ((\a b -> [a,maybe '-' id b]) ^-> adjElt) "12345"
+-- ["1-","21","32","43","54"]
+-- >>> mapWith ((\a b -> [a,maybe '-' id b]) <-^ adjElt) "12345"
+-- ["12","23","34","45","5-"]
 
 foldlElts :: (i -> a -> i)
           -> i
@@ -216,6 +251,11 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (s', s')) z
 -- +------+---------------------------------------------+-----------------------------------------------+
 -- |  an  | @((z \`acc\` a0) \`acc\` a1) \`acc\` .. an@ | @z \`acc\` an@                                |
 -- +------+---------------------------------------------+-----------------------------------------------+
+--
+-- >>> mapWith ((\a b -> a ++ show b) ^-> foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
+-- ["every5","good9","boy12"]
+-- >>> mapWith ((\a b -> a ++ show b) <-^ foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
+-- ["every12","good7","boy3"]
 
 foldl1Elts :: (a -> a -> a)
            -> Injector a a
@@ -235,6 +275,11 @@ foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (s', Just s'))
 -- +------+----------------------------------+-----------------------------------+
 -- |  an  | @(a0 \`acc\` a1) \`acc\` .. an@  | @an@                              |
 -- +------+----------------------------------+-----------------------------------+
+--
+-- >>> mapWith ((,) ^-> foldl1Elts (+)) [4,1,3]
+-- [(4,4),(1,5),(3,8)]
+-- >>> mapWith ((,) <-^ foldl1Elts (+)) [4,1,3]
+-- [(4,8),(1,4),(3,3)]
 
 -- $CustomMaps
 --

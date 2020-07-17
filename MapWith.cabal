@@ -1,7 +1,7 @@
 name:                MapWith
 version:             0.1.0.0
 
-synopsis:            mapWith: like fmap, but with additional arguments (isFirst, isLast, etc).
+synopsis:            mapWith: like fmap, but with additional parameters (isFirst, isLast, etc).
 category:            Combinators
 maintainer:          dj112358@outlook.com
 

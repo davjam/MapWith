@@ -1,6 +1,6 @@
 # MapWith [![Hackage version](https://img.shields.io/hackage/v/MapWith.svg?label=Hackage)](https://hackage.haskell.org/package/MapWith) [![build status](https://img.shields.io/travis/davjam/MapWith/master.svg?label=Travis%20build)](https://travis-ci.com/github/davjam/MapWith)
 
-`mapWith`: like `fmap`, but can "inject" additional arguments such as whether first (or last) element, etc.
+`mapWith`: like `fmap`, but can "inject" additional parameters such as whether first (or last) element, etc.
 
 # Background
 
@@ -14,7 +14,7 @@ but also wanted something that:
   - index from start/end
   - the previous/next element
 - makes it easy to create new types of attribute to provide.
-- can provide any number of attributes as separate arguments to a function (not just a 3-tuple).
+- can provide any number of attributes as separate parameters to a function (not just a 3-tuple).
 
 so, after only 2 years, I built a small library to do all of these.
 
