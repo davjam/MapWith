@@ -56,6 +56,7 @@ tests =
   , mapWith (testFn0 ^-> foldl1Elts (-)   ) [9, 1, 8] == [ 9,  8, 0]
   , mapWith (testFn0 <-^ foldl1Elts (-)   ) [9, 1, 8] == [-2,  7, 8]
   , mapWith (testFn0 ^-> foldlElts  (-) 20) [9, 1, 8] == [11, 10, 2] 
+  , mapWith ((,,,) ^-> adj2Elts & isLast) "fred" ==[('f',Nothing,Nothing,False),('r',Just 'f',Nothing,False),('e',Just 'r',Just 'f',False),('d',Just 'e',Just 'r',True)]
   ]
 
 main | and tests = exitSuccess

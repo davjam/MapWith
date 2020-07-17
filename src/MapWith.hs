@@ -40,6 +40,7 @@ module MapWith
   -- $PredefinedInjectors
   , isLim
   , adjElt
+  , adj2Elts
   , eltIx
   , foldlElts
   , foldl1Elts
@@ -60,6 +61,9 @@ module MapWith
   , Injector(..)
   )
 where
+
+import AppTuple
+import Data.Tuple.OneTuple
 
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty(..), fromList)
@@ -141,8 +145,8 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 -- 
 -- #PredefinedInjectors#Use these (or custom 'Injector's) to create 'InjectedFn's that can be used with 'mapWith'
 
-isLim :: Injector a Bool
-isLim = Injector (\_ i -> (i, False)) True
+isLim :: Injector a (OneTuple Bool)
+isLim = Injector (\_ i -> (OneTuple i, False)) True
 -- ^ inject 'True' if the item is at the limit:
 --
 -- - from the left: if it's the first item
@@ -150,16 +154,16 @@ isLim = Injector (\_ i -> (i, False)) True
 --
 -- else inject False.
 
-eltIx :: Integral i => Injector a i
-eltIx = Injector (\_ i -> (i, i+1)) 0
+eltIx :: Integral i => Injector a (OneTuple i)
+eltIx = Injector (\_ i -> (OneTuple i, i+1)) 0
 -- ^ inject the item index:
 --
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
-        -> Injector a i
-eltFrom l = Injector (\_ s -> assert (not $ null s) (head s, tail s)) l
+        -> Injector a (OneTuple i)
+eltFrom l = Injector (\_ s -> assert (not $ null s) (OneTuple $ head s, tail s)) l
 -- ^ Inject each given element in turn:
 --
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
@@ -170,27 +174,31 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (head s, tail s)) l
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
 
-eltFromMay :: [i] -> Injector a (Maybe i)
-eltFromMay l = Injector (\_ s -> case s of []   -> (Nothing, [])
-                                           i:ix -> (Just i, ix))
+eltFromMay :: [i] -> Injector a (OneTuple (Maybe i))
+eltFromMay l = Injector (\_ s -> case s of []   -> (OneTuple Nothing , [])
+                                           i:ix -> (OneTuple $ Just i, ix))
                          l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
 
-eltFromDef :: i -> [i] -> Injector a i
-eltFromDef def l = Injector (\_ s -> case s of []   -> (def, [])
-                                               i:ix -> (i, ix))
+eltFromDef :: i -> [i] -> Injector a (OneTuple i)
+eltFromDef def l = Injector (\_ s -> case s of []   -> (OneTuple def, [])
+                                               i:ix -> (OneTuple i  , ix))
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 
-eltFromCycle :: NonEmpty i -> Injector a i
-eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (i, l)
-                                             i :| y:yx -> (i, y :| yx))
+eltFromCycle :: NonEmpty i -> Injector a (OneTuple i)
+eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (OneTuple i, l)
+                                             i :| y:yx -> (OneTuple i, y :| yx))
                           l
 -- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
 
-adjElt :: Injector a (Maybe a)
-adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
+adjElt :: Injector a (OneTuple (Maybe a))
+adjElt = Injector (\a prevMay -> (OneTuple prevMay, Just a)) Nothing
 -- ^ inject 'Just' the adjacent item:
+
+adj2Elts :: Injector a (Maybe a, (Maybe a, ()))
+adj2Elts = Injector (\a (prev1May, prev2May) -> ((prev1May, (prev2May, ())), (Just a, prev1May))) (Nothing, Nothing)
+
 --
 -- - from the left: the previous item, except for the first item
 -- - from the right: the next item, except for the last item. (The "previous from the right" is the "next".)
@@ -199,8 +207,8 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 
 foldlElts :: (i -> a -> i)
           -> i
-          -> Injector a i
-foldlElts f z = Injector (\a s -> let s' = f s a in (s', s')) z
+          -> Injector a (OneTuple i)
+foldlElts f z = Injector (\a s -> let s' = f s a in (OneTuple s', s')) z
 -- ^ Inject a (left-associative) fold of the items:
 --
 -- +------+---------------------------------------------------------------------------------------------+
@@ -218,8 +226,8 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (s', s')) z
 -- +------+---------------------------------------------+-----------------------------------------------+
 
 foldl1Elts :: (a -> a -> a)
-           -> Injector a a
-foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (s', Just s')) Nothing
+           -> Injector a (OneTuple a)
+foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (OneTuple s', Just s')) Nothing
 -- ^ A variant of 'foldlElts' that has no starting value:
 --
 -- +------+----------------------------------------------------------------------+
@@ -323,9 +331,9 @@ data InjectedFn a b
 
 class Injectable m where
   -- | Inject "from the left"
-  (^->) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
+  (^->) :: AppTuple i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
-  (<-^) :: (m a (i -> b)) -> Injector a i -> InjectedFn a b
+  (<-^) :: AppTuple i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
 
 -- ^ An 'Injectable' is (recursively) either:
 --
@@ -336,17 +344,17 @@ infixl 1 ^->
 infixl 1 <-^
 
 instance Injectable (->) where
-  f ^-> itL' = InjectedFnL (\a l   -> f a l) itL'
-  f <-^ itR' = InjectedFnR (\a   r -> f a r)        itR'
+  f ^-> itL' = InjectedFnL (\a l   -> f a $# l) itL'
+  f <-^ itR' = InjectedFnR (\a   r -> f a $# r)        itR'
 
 instance Injectable InjectedFn where
-  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
-  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r l')          itL'            itR
-  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r l') (injPair itL itL')       itR
+  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   $# l') (injPair itL itL')
+  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r $# l')          itL'            itR
+  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r $# l') (injPair itL itL')       itR
 
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   r')          itL                 itR'
-  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r r')                 (injPair itR itR')
-  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r r')          itL    (injPair itR itR')
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
+  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r $# r')                 (injPair itR itR')
+  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r $# r')          itL    (injPair itR itR')
 
 -- $PrecombinedInjectors
 -- These are combinations of '^->' or '<-^' with [pre-defined injectors](#PredefinedInjectors).
