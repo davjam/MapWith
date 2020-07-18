@@ -150,9 +150,9 @@ isLim = Injector (\_ i -> (i, False)) True
 --
 -- else inject False.
 --
--- >>> mapWith ((\a b -> [a,if b then '*' else ' ']) ^-> isLim) "12345"
+-- >>> let f = (\a b -> [a, ch b]); ch isLim = if isLim then '*' else ' ' in mapWith (f ^-> isLim) "12345"
 -- ["1*","2 ","3 ","4 ","5 "]
--- >>> mapWith ((\a b -> [a,if b then '*' else ' ']) <-^ isLim) "12345"
+-- >>> let f = (\a b -> [a, ch b]); ch isLim = if isLim then '*' else ' ' in mapWith (f <-^ isLim) "12345"
 -- ["1 ","2 ","3 ","4 ","5*"]
 
 eltIx :: Integral i => Injector a i
@@ -162,9 +162,9 @@ eltIx = Injector (\_ i -> (i, i+1)) 0
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 --
--- >>> mapWith ((\a b -> [a,head $ show b]) ^-> eltIx) "freddy"
+-- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f ^-> eltIx) "freddy"
 -- ["f0","r1","e2","d3","d4","y5"]
--- >>> mapWith ((\a b -> [a,head $ show b]) <-^ eltIx) "freddy"
+-- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f <-^ eltIx) "freddy"
 -- ["f5","r4","e3","d2","d1","y0"]
 
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
@@ -175,9 +175,9 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (head s, tail s)) l
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
 -- - from the right: the first element will be injected for the last item in the 'Traversable'.
 --
--- >>> mapWith ((\a b -> [a,b]) ^-> eltFrom "bill") "sue"
+-- >>> let f a b = [a,b] in mapWith (f ^-> eltFrom "bill") "sue"
 -- ["sb","ui","el"]
--- >>> mapWith ((\a b -> [a,b]) <-^ eltFrom "bill") "sue"
+-- >>> let f a b = [a,b] in mapWith (f <-^ eltFrom "bill") "sue"
 -- ["sl","ui","eb"]
 --
 -- As a result of laziness, it is not always an error if there are not enough elements, for example:
@@ -191,9 +191,9 @@ eltFromMay l = Injector (\_ s -> case s of []   -> (Nothing, [])
                          l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
 --
--- >>> mapWith ((\a b -> [a,maybe '-' id b]) ^-> eltFromMay "ben") "sally"
+-- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f ^-> eltFromMay "ben") "sally"
 -- ["sb","ae","ln","l-","y-"]
--- >>> mapWith ((\a b -> [a,maybe '-' id b]) <-^ eltFromMay "ben") "sally"
+-- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f <-^ eltFromMay "ben") "sally"
 -- ["s-","a-","ln","le","yb"]
 
 eltFromDef :: i -> [i] -> Injector a i
@@ -202,9 +202,9 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (def, [])
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 --
--- >>> mapWith ((\a b -> [a,b]) ^-> eltFromDef 'X' "ben") "sally"
+-- >>> let f a b = [a,b] in mapWith (f ^-> eltFromDef 'X' "ben") "sally"
 -- ["sb","ae","ln","lX","yX"]
--- >>> mapWith ((\a b -> [a,b]) <-^ eltFromDef 'X' "ben") "sally"
+-- >>> let f a b = [a,b] in mapWith (f <-^ eltFromDef 'X' "ben") "sally"
 -- ["sX","aX","ln","le","yb"]
 
 eltFromCycle :: NonEmpty i -> Injector a i
@@ -213,9 +213,9 @@ eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (i, l)
                           l
 -- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
 --
--- >>> mapWith ((\a b -> [a,b]) ^-> eltFromCycle (fromList "!?#")) "sally"
+-- >>> let f a b = [a,b] in mapWith (f ^-> eltFromCycle (fromList "123")) "sally"
 -- ["s!","a?","l#","l!","y?"]
--- >>> mapWith ((\a b -> [a,b]) <-^ eltFromCycle (fromList "!?#")) "sally"
+-- >>> let f a b = [a,b] in mapWith (f <-^ eltFromCycle (fromList "123")) "sally"
 -- ["s?","a!","l#","l?","y!"]
 
 adjElt :: Injector a (Maybe a)
@@ -227,9 +227,9 @@ adjElt = Injector (\a prevMay -> (prevMay, Just a)) Nothing
 --
 -- inject 'Nothing' if there is no adjacent item (i.e. for the first / last).
 --
--- >>> mapWith ((\a b -> [a,maybe '-' id b]) ^-> adjElt) "12345"
+-- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f ^-> adjElt) "12345"
 -- ["1-","21","32","43","54"]
--- >>> mapWith ((\a b -> [a,maybe '-' id b]) <-^ adjElt) "12345"
+-- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f <-^ adjElt) "12345"
 -- ["12","23","34","45","5-"]
 
 foldlElts :: (i -> a -> i)
@@ -252,9 +252,9 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (s', s')) z
 -- |  an  | @((z \`acc\` a0) \`acc\` a1) \`acc\` .. an@ | @z \`acc\` an@                                |
 -- +------+---------------------------------------------+-----------------------------------------------+
 --
--- >>> mapWith ((\a b -> a ++ show b) ^-> foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
+-- >>> let f a b = a ++ show b in mapWith (f ^-> foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
 -- ["every5","good9","boy12"]
--- >>> mapWith ((\a b -> a ++ show b) <-^ foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
+-- >>> let f a b = a ++ show b in mapWith (f <-^ foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
 -- ["every12","good7","boy3"]
 
 foldl1Elts :: (a -> a -> a)
@@ -276,10 +276,10 @@ foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (s', Just s'))
 -- |  an  | @(a0 \`acc\` a1) \`acc\` .. an@  | @an@                              |
 -- +------+----------------------------------+-----------------------------------+
 --
--- >>> mapWith ((,) ^-> foldl1Elts (+)) [4,1,3]
--- [(4,4),(1,5),(3,8)]
--- >>> mapWith ((,) <-^ foldl1Elts (+)) [4,1,3]
--- [(4,8),(1,4),(3,3)]
+-- >>> mapWith ((,) ^-> foldl1Elts (-)) [10,1,3]
+-- [(10,10),(1,9),(3,6)]
+-- >>> mapWith ((,) <-^ foldl1Elts (-)) [10,1,3]
+-- [(10,-8),(1,2),(3,3)]
 
 -- $CustomMaps
 --
