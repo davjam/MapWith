@@ -34,7 +34,6 @@ module MapWith
   , foldMapWith
   , InjectedFn
   , Injectable(..)
-  
 
   -- * Predefined Injectors
   -- $PredefinedInjectors
@@ -75,8 +74,8 @@ import Control.Exception (assert)
 -- These names are used for types and variables throughout:
 --
 -- [@t@]: the 'Traversable' we're mapping over
--- [@a@]: the value in the input 'Traversable'
--- [@b@]: the result in the output 'Traversable'
+-- [@a@]: a value in the input 'Traversable'
+-- [@b@]: a result in the output 'Traversable'
 -- [@i@]: an output from an 'Injector', injected into a map function
 -- [@s@]: the internal state in an 'Injector'
 
@@ -92,15 +91,16 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --
 --  to determine both:
 --
---  - the injection value, and
+--  - the injection value(s), and
 --  - the new state.
 --
---  The first value to inject is determined by a first call to the generate function.
+--  The first value(s) to inject is/are determined by a first call to the generate function.
 --  The first call to the generate function is with the first (if combined with '^->') or last (if combined with '<-^') item from the 'Traversable' and the initial state.
 --
 --  For example:
 --
---  >>> funnyNext a s = (a + s, a + 1)
+--  >>> :m +Data.Tuple.OneTuple
+--  >>> funnyNext a s = (OneTuple $ a + s, a + 1)
 --  >>> funnyInjector = Injector funnyNext 17
 --  >>> mapWith ((\_ i -> i) ^-> funnyInjector) [4,8,3]
 --  [21,13,12]
@@ -128,11 +128,7 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --  + 3     + 9             + 4    + 9+4=__13__    + 4+1=5 (ignored) |
 --  +-------+---------------+------+---------------+-----------------+
 --
---  More usefully, this would allow for e.g. the prior two elements:
---
---  > prev2Inj = Injector (\x i@(prev1May, _) -> (i, (Just x, prev1May))) (Nothing, Nothing)
---
--- or random values, etc.
+--  More usefully, this might allow for e.g. injection of random values, etc.
 
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
 injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
@@ -251,7 +247,7 @@ foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (OneTuple s', 
 
 -- $CustomMaps
 --
--- In general, a map function will take one parameter from the 'Traversable', then one each from any number of 'Injector's. For example:
+-- In general, a map function will take one parameter from the 'Traversable', then one (or more) from each of any number of 'Injector's. For example:
 --
 -- >>> mapFn w x y z = (w, x, y, z)
 -- >>> injectedFn = mapFn <-^ isLim ^-> eltIx <-^ eltFrom [8,2,7,1]
@@ -332,7 +328,7 @@ data InjectedFn a b
 -- - each @/op/@ is '^->' or '<-^'; and
 -- - each @/inj/@ is an 'Injector'
 --
--- produces an @'InjectedFn' a b@, with n injected values.
+-- produces an @'InjectedFn' a b@, with n injected values (or more if any of the injectors inject multiple values).
 
 class Injectable m where
   -- | Inject "from the left"
