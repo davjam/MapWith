@@ -195,15 +195,20 @@ eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (OneTuple i, l)
 adjElt :: Injector a (OneTuple (Maybe a))
 adjElt = Injector (\a prevMay -> (OneTuple prevMay, Just a)) Nothing
 -- ^ inject 'Just' the adjacent item:
-
-adj2Elts :: Injector a (Maybe a, (Maybe a, ()))
-adj2Elts = Injector (\a (prev1May, prev2May) -> ((prev1May, (prev2May, ())), (Just a, prev1May))) (Nothing, Nothing)
-
 --
 -- - from the left: the previous item, except for the first item
 -- - from the right: the next item, except for the last item. (The "previous from the right" is the "next".)
 --
 -- inject 'Nothing' if there is no adjacent item (i.e. for the first / last).
+
+adj2Elts :: Injector a (Maybe a, (Maybe a, ()))
+adj2Elts = Injector (\a (prev1May, prev2May) -> ((prev1May, (prev2May, ())), (Just a, prev1May))) (Nothing, Nothing)
+-- ^ like 'adjElt', but injects the two adjacent items into separate parameters.
+--
+-- >>> let f a b c = [a,ch b,ch c]; ch = maybe '-' id in mapWith (f ^-> adj2Elts) "12345"
+-- ["1--","21-","321","432","543"]
+-- >>> let f a b c = [a,ch b,ch c]; ch = maybe '-' id in mapWith (f <-^ adj2Elts) "12345"
+-- ["123","234","345","45-","5--"]
 
 foldlElts :: (i -> a -> i)
           -> i
