@@ -58,6 +58,8 @@ module MapWith
 
   -- * Custom Injectors
   , Injector(..)
+  
+  , module AppTuple
   )
 where
 
