@@ -1,4 +1,4 @@
-# MapWith [![Hackage version](https://img.shields.io/hackage/v/MapWith.svg?label=Hackage)](https://hackage.haskell.org/package/MapWith) [![build status](https://img.shields.io/travis/davjam/MapWith/master.svg?label=Travis%20build)](https://travis-ci.com/github/davjam/MapWith)
+# MapWith [![Stackage version](https://www.stackage.org/package/MapWith/badge/nightly?label=Stackage)](https://www.stackage.org/package/MapWith) [![Hackage version](https://img.shields.io/hackage/v/MapWith.svg?label=Hackage)](https://hackage.haskell.org/package/MapWith) [![build status](https://img.shields.io/travis/davjam/MapWith/master.svg?label=Travis%20build)](https://travis-ci.com/github/davjam/MapWith)
 
 `mapWith`: like `fmap`, but can "inject" additional parameters such as whether first (or last) element, etc.
 
