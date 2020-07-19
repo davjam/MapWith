@@ -6,10 +6,10 @@
 module AppTuple
   (
     AppTuple(..)
+  , App1, App2, App3, App4
+  , app1, app2, app3, app4
   )
 where
-
-import Data.Tuple.OneTuple
 
 class AppTuple tupType b where
   type FnType tupType b :: *
@@ -23,9 +23,20 @@ instance AppTuple t2 b => AppTuple (t1, t2) b where
   type FnType (t1, t2) b = t1 -> (FnType t2 b)
   f $# (t1, t2) = f t1 $# t2
 
-instance AppTuple (OneTuple a) b where
-  type FnType (OneTuple a) b = a -> b
-  f $# (OneTuple a) = f a
+type App1       a =            (a, ())
+type App2     a b =        (a, (b, ()))
+type App3   a b c =    (a, (b, (c, ())))
+type App4 a b c d = (a,(b, (c, (d, ()))))
+
+app1 ::                a -> App1       a
+app2 ::           a -> b -> App2     a b
+app3 ::      a -> b -> c -> App3   a b c
+app4 :: a -> b -> c -> d -> App4 a b c d
+
+app1       a =             (a, ())
+app2     a b =         (a, (b, ()))
+app3   a b c =     (a, (b, (c, ())))
+app4 a b c d = (a, (b, (c, (d, ()))))
 
 _z :: String
 _z = fn1 $# ("fred", (7, (True, ())))

@@ -62,7 +62,6 @@ module MapWith
 where
 
 import AppTuple
-import Data.Tuple.OneTuple
 
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty(..), fromList)
@@ -99,8 +98,7 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argume
 --
 --  For example:
 --
---  >>> :m +Data.Tuple.OneTuple
---  >>> funnyNext a s = (OneTuple $ a + s, a + 1)
+--  >>> funnyNext a s = (app1 $ a + s, a + 1)
 --  >>> funnyInjector = Injector funnyNext 17
 --  >>> mapWith ((\_ i -> i) ^-> funnyInjector) [4,8,3]
 --  [21,13,12]
@@ -141,8 +139,8 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 -- 
 -- #PredefinedInjectors#Use these (or custom 'Injector's) to create 'InjectedFn's that can be used with 'mapWith'
 
-isLim :: Injector a (OneTuple Bool)
-isLim = Injector (\_ i -> (OneTuple i, False)) True
+isLim :: Injector a (App1 Bool)
+isLim = Injector (\_ i -> (app1 i, False)) True
 -- ^ inject 'True' if the item is at the limit:
 --
 -- - from the left: if it's the first item
@@ -150,16 +148,16 @@ isLim = Injector (\_ i -> (OneTuple i, False)) True
 --
 -- else inject False.
 
-eltIx :: Integral i => Injector a (OneTuple i)
-eltIx = Injector (\_ i -> (OneTuple i, i+1)) 0
+eltIx :: Integral i => Injector a (App1 i)
+eltIx = Injector (\_ i -> (app1 i, i+1)) 0
 -- ^ inject the item index:
 --
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
-        -> Injector a (OneTuple i)
-eltFrom l = Injector (\_ s -> assert (not $ null s) (OneTuple $ head s, tail s)) l
+        -> Injector a (App1 i)
+eltFrom l = Injector (\_ s -> assert (not $ null s) (app1 $ head s, tail s)) l
 -- ^ Inject each given element in turn:
 --
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
@@ -170,26 +168,26 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (OneTuple $ head s, tail s))
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
 
-eltFromMay :: [i] -> Injector a (OneTuple (Maybe i))
-eltFromMay l = Injector (\_ s -> case s of []   -> (OneTuple Nothing , [])
-                                           i:ix -> (OneTuple $ Just i, ix))
+eltFromMay :: [i] -> Injector a (App1 (Maybe i))
+eltFromMay l = Injector (\_ s -> case s of []   -> (app1 Nothing , [])
+                                           i:ix -> (app1 $ Just i, ix))
                          l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
 
-eltFromDef :: i -> [i] -> Injector a (OneTuple i)
-eltFromDef def l = Injector (\_ s -> case s of []   -> (OneTuple def, [])
-                                               i:ix -> (OneTuple i  , ix))
+eltFromDef :: i -> [i] -> Injector a (App1 i)
+eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
+                                               i:ix -> (app1 i  , ix))
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 
-eltFromCycle :: NonEmpty i -> Injector a (OneTuple i)
-eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (OneTuple i, l)
-                                             i :| y:yx -> (OneTuple i, y :| yx))
+eltFromCycle :: NonEmpty i -> Injector a (App1 i)
+eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (app1 i, l)
+                                             i :| y:yx -> (app1 i, y :| yx))
                           l
 -- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
 
-adjElt :: Injector a (OneTuple (Maybe a))
-adjElt = Injector (\a prevMay -> (OneTuple prevMay, Just a)) Nothing
+adjElt :: Injector a (App1 (Maybe a))
+adjElt = Injector (\a prevMay -> (app1 prevMay, Just a)) Nothing
 -- ^ inject 'Just' the adjacent item:
 --
 -- - from the left: the previous item, except for the first item
@@ -197,8 +195,8 @@ adjElt = Injector (\a prevMay -> (OneTuple prevMay, Just a)) Nothing
 --
 -- inject 'Nothing' if there is no adjacent item (i.e. for the first / last).
 
-adj2Elts :: Injector a (Maybe a, (Maybe a, ()))
-adj2Elts = Injector (\a (prev1May, prev2May) -> ((prev1May, (prev2May, ())), (Just a, prev1May))) (Nothing, Nothing)
+adj2Elts :: Injector a (App2 (Maybe a) (Maybe a))
+adj2Elts = Injector (\a (prev1May, prev2May) -> (app2 prev1May prev2May, (Just a, prev1May))) (Nothing, Nothing)
 -- ^ like 'adjElt', but injects the two adjacent items into separate parameters.
 --
 -- >>> let f a b c = [a,ch b,ch c]; ch = maybe '-' id in mapWith (f ^-> adj2Elts) "12345"
@@ -208,8 +206,8 @@ adj2Elts = Injector (\a (prev1May, prev2May) -> ((prev1May, (prev2May, ())), (Ju
 
 foldlElts :: (i -> a -> i)
           -> i
-          -> Injector a (OneTuple i)
-foldlElts f z = Injector (\a s -> let s' = f s a in (OneTuple s', s')) z
+          -> Injector a (App1 i)
+foldlElts f z = Injector (\a s -> let s' = f s a in (app1 s', s')) z
 -- ^ Inject a (left-associative) fold of the items:
 --
 -- +------+---------------------------------------------------------------------------------------------+
@@ -227,8 +225,8 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (OneTuple s', s')) z
 -- +------+---------------------------------------------+-----------------------------------------------+
 
 foldl1Elts :: (a -> a -> a)
-           -> Injector a (OneTuple a)
-foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (OneTuple s', Just s')) Nothing
+           -> Injector a (App1 a)
+foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (app1 s', Just s')) Nothing
 -- ^ A variant of 'foldlElts' that has no starting value:
 --
 -- +------+----------------------------------------------------------------------+
