@@ -3,83 +3,122 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Module      : CurryN
+Description : Provides curry/uncurry-like function for any number of parameters
+Copyright   : (c) David James, 2020
+License     : BSD3
+Stability   : Experimental
+
+A generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
+
+For the class instances provided here, the arguments are packaged into a "stacked tuple".
+For example @(\'x\', (3 :: Int, (True, ())))@ represents a set of three arguments of different types:
+
+- @\'x\' :: Char@;
+- @3 :: Int@; and
+- @True :: Bool@.
+-}
+
 module CurryN
   (
-  -- * Applying Multiple Arguments
+  -- * Class
     CurryN(..)
   , ($#)
-    
-  -- ** Argument Stacking
+
+  -- * Stacking Helpers
   -- $StackingFunctions
   , App1, App2, App3, App4
   , app1, app2, app3, app4
   
-  -- ** Custom Argument Application
+  -- * Custom CurryN Implementations
   -- $CustomArgApp
+  
+  -- * Other Implementations
+  -- $SeeAlso
   )
 where
 
-{- ^
-'CurryN' represents the ability to apply any (fixed) number of arguments (embedded in 'args') to a function that returns a result of type 'b'.
-The arguments can all be of different types.
+{- |
+Given:
 
-For the instances provided here, the arguments have to be packaged into a "stacked tuple", so 'args' are (recursively) either:
+- a type 'args' containing n embedded arguments; and 
+- a result type 'r'
 
-- @()@: which represents zero arguments; or
-- @(value, 'args')@: which represents the argument 'value' followed by the arguments in 'args'.
+@CurryN args r@ represents the ability to convert either way between functions:
 
-For example @(\'x\', (12 :: Int, (True, ())))@ represents a set of three arguments of different types:
+- @fCurried :: /each/ -> /argument/ -> /as/ -> /a/ -> /separate/ -> /parameter/ -> r@; and
+- @fUncurried :: /all-arguments-embedded-in-a-single-parameter/ -> r@.
 
-- @\'x\' :: Char@;
-- @12 :: Int@; and
-- @True :: Bool@.
+so that:
+
+- @fCurried = curryN fUncurried@; and
+- @fUncurried = uncurryN fCurried@.
 -}
 
 class CurryN args r where
   {- |
-    The type of the function that can have 'args' types applied and that returns a result of type 'r'.
+    The type of the (curried) function that can have arguments of the types embedded in 'args' applied and that returns a result of type 'r'.
     For example:
 
-    >>> egType :: FnType (Char, (Int, (Bool, ()))) String; egType = undefined
-    >>> :t egType
-    egType :: Char -> Int -> Bool -> [Char]
+    >>> :kind! FnType (Char, (Int, (Bool, ()))) String
+    FnType (Char, (Int, (Bool, ()))) String :: *
+    = Char -> Int -> Bool -> [Char]
   -}
   type FnType args r :: *
 
   {- |
-    Applies each argument in 'args' as a separate parameter to a function (of type @FnType args r@), and returns a 'r'.
+    Embeds a number of separate arguments into a single 'args' parameter, applies 'args' to a function, and returns the result.
 
     For example:
 
-    >>> fn1 c n b = c : show n ++ if b then "hello" else "goodbye"
-    >>> fn1 $# ('x', (12, (True, ())))
-    "x12hello"
+    >>> fn1 (c, (n, (b, ()))) = c : replicate n '1' ++ if b then "hello" else "goodbye"
+    >>> curryN fn1 'x' 3 True
+    "x111hello"
+    
+    This also support partial application:
+    
+    >>> :t curryN fn1 'x'
+    curryN fn1 'x' :: Int -> Bool -> [Char]
   -}
-  uncurryN :: FnType args r -> args -> r
+
   curryN :: (args -> r) -> FnType args r
 
+  {- |
+    Applies each argument embedded in 'args' as a separate parameter to a function, and returns the result.
+
+    For example:
+
+    >>> fn2 c n b = c : replicate n '2' ++ if b then "hello" else "goodbye"
+    >>> uncurryN fn2 ('x', (3, (True, ())))
+    "x222hello"
+  -}
+  uncurryN :: FnType args r -> args -> r
+
+-- | the application of zero arguments, giving @r@
 instance CurryN () r where
   type FnType () r = r
-  uncurryN f () = f
   curryN f = f ()
+  uncurryN f () = f
 
+-- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
 instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
   type FnType (arg, moreArgs) r = arg -> (FnType moreArgs r)
-  uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
   curryN f a = curryN (\t -> f (a, t))
+  uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
 
--- | A binary operator for 'uncurryN', so if @args@ contains values @a@, @b@ and @c@ then @f $# args = f a b c@
+-- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
 ($#) :: CurryN args r => FnType args r -> args -> r
 f $# args = (uncurryN f) args
 
 {- $StackingFunctions
-These types and functions make code look a little less weird. For example, you can write:
+These types and functions can make code that uses the "stacked tupples" look a little less weird. For example, you can write:
 
->>> fn1 $# app3 'x' 12 True
+>>> fn2 $# app3 'x' 3 True
 
 instead of
 
->>> fn1 $# ('x', (12, (True, ())))
+>>> fn2 $# ('x', (3, (True, ())))
 
 Although these are only provided here for 1 to 4 arguments, you can use the "stacked tuple" to apply any number of arguments.
 -}
@@ -115,12 +154,32 @@ data MyStuff = MyStuff Char Int Bool
 
 instance CurryN MyStuff r where
   type FnType MyStuff r = Char -> Int -> Bool -> r
-  f $# MyStuff c n b = f c n b
+  curryN f c n b = f (MyStuff c n b)
+  uncurryN f (MyStuff c n b) = f c n b
 @
 
 then:
 
->>> fn1 c n b = c : show n ++ if b then "hello" else "goodbye"
->>> fn1 $# MyStuff 'y' 7 False
-"y7goodbye"
+>>> fn2 $# MyStuff 'y' 5 False
+"y22222goodbye"
+>>> fn3 (MyStuff c n b) = c : show n ++ show b
+>>> curryN fn3 'p' 8 False
+"p8False"
+
+Doing this, especially for a type with multiple constructors, may not be sensible.
+-}
+
+{- $SeeAlso
+There are similar implementations in:
+
+1. [Data.Tuple.Curry](https://hackage.haskell.org/package/tuple/docs/Data-Tuple-Curry.html); and
+1. [Data.Tuple.Ops](https://hackage.haskell.org/package/tuple-sop/docs/Data-Tuple-Ops.html).
+
+These both take tuples of the form (arg1, arg2, .., argn), which is arguably easier to use.
+
+I built this (instead of using those), for good and bad reasons including:
+
+- I'm trying to improve my Haskell. TypeFamilies seemed to help here, so I got to start using those too.
+- (1) has a limit of 32 args. OK that's probably enough, but it just seemed wrong to have any restriction.
+- (2) Is a little complex for me. (Though, from what I've read so far, the "stacked-tuples" here are in SOP form?). They also have a limit - in this case 10 args.
 -}

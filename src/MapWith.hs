@@ -3,7 +3,7 @@
 
 -- |
 -- Module      : MapWith
--- Description : blah
+-- Description : Provides the fmap-like functions
 -- Copyright   : (c) David James, 2020
 -- License     : BSD3
 -- Stability   : Experimental
@@ -58,8 +58,6 @@ module MapWith
 
   -- * Custom Injectors
   , Injector(..)
-  
-  , module CurryN
   )
 where
 
@@ -77,11 +75,12 @@ import Control.Exception (assert)
 -- [@t@]: the 'Traversable' we're mapping over
 -- [@a@]: a value in the input 'Traversable'
 -- [@b@]: a result in the output 'Traversable'
--- [@i@]: an output from an 'Injector', injected into a map function
+-- [@i@]: an output from an 'Injector', injected into a map function. (i may represent one than one injected value).
 -- [@s@]: the internal state in an 'Injector'
 
 --XXXX I'd like to add separate comments for each argument, but that's not supported to GHC 8.6 https://github.com/haskell/haddock/issues/836#issuecomment-391402361
 data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first argument is a generate function, the second argument is the initial state.
+-- The @i@ result must be an @args@ (per 'CurryN'), e.g. a "stacked-tuple", in order for the '^->' and '<-^' operators to use the 'Injector'.
 
 -- ^ Injectors have an initial state and a generate function.
 --
@@ -338,8 +337,11 @@ class Injectable m where
 
 -- ^ An 'Injectable' is (recursively) either:
 --
--- - a function @(a -> i -> b)@; or
--- - an @InjectedFn a (i -> b)@, created by @'Injectable' /op/ 'Injector'@
+-- - a function @(a -> i1 [.. -> in] -> b)@; or
+-- - an @InjectedFn a (i1 [.. -> in] -> b)@, created by @'Injectable' /op/ 'Injector'@
+--
+-- When @n@ is the number of parameters injected by an injector (most commonly 1).
+
 
 infixl 1 ^->
 infixl 1 <-^

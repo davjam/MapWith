@@ -2,6 +2,9 @@
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveTraversable #-}
 
+module Main (main)
+where
+
 import System.Exit
 import Data.Function ((&))
 import Data.List.NonEmpty (NonEmpty(..), fromList)
