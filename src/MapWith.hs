@@ -332,9 +332,9 @@ data InjectedFn a b
 
 class Injectable m where
   -- | Inject "from the left"
-  (^->) :: AppTuple i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (^->) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
-  (<-^) :: AppTuple i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (<-^) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
 
 -- ^ An 'Injectable' is (recursively) either:
 --
