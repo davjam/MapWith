@@ -59,11 +59,11 @@ module MapWith
   -- * Custom Injectors
   , Injector(..)
   
-  , module AppTuple
+  , module CurryN
   )
 where
 
-import AppTuple
+import CurryN
 
 import Data.Foldable (fold)
 import Data.List.NonEmpty (NonEmpty(..), fromList)

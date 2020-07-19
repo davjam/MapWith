@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module AppTuple
+module CurryN
   (
   -- * Applying Multiple Arguments
     CurryN(..)
