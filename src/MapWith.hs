@@ -93,7 +93,7 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parame
 --  - the injection value(s), and
 --  - the new state.
 --
---  The injection value(s) must be an @args@ (per 'CurryN'), in order for the '^->' and '<-^' operators to use the 'Injector'.
+--  The injection value(s) must be an @args@ (per 'CurryN'), in order for the injector to work with the  '^->' and '<-^' operators.
 --  These can be created by:
 --
 --  - using 'app1', 'app2', etc; or
