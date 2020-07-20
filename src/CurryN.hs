@@ -181,5 +181,5 @@ I built this (instead of using those), for good and bad reasons including:
 
 - I'm trying to improve my Haskell. TypeFamilies seemed to help here, so I got to start using those too.
 - (1) has a limit of 32 args. OK that's probably enough, but it just seemed wrong to have any restriction.
-- (2) Is a little complex for me. (Though, from what I've read so far, the "stacked-tuples" here are in SOP form?). They also have a limit - in this case 10 args.
+- (2) Seems a little complex, and excesive for the needs here. (Though, from what I've read so far, the "stacked-tuples" here are in SOP form?). They also have a limit - in this case 10 args.
 -}
