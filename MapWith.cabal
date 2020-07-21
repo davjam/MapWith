@@ -111,3 +111,12 @@ benchmark perf-foldl
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
+
+--cabal bench CurryNPerf --ghc-options="-O2 -ddump-simpl -dsuppress-all" --benchmark-options="+RTS -P" > CurryNPerf.core
+benchmark CurryNPerf
+  main-is:             CurryNPerf.hs
+  Other-modules:       CurryN
+  hs-source-dirs:      src perf
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
