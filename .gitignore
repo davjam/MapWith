@@ -24,3 +24,5 @@ cabal.project.local~
 .ghc.environment.*
 *.npp
 *.core
+*.asm
+*.exe
