@@ -1,13 +1,19 @@
 import CurryN
+import MapWith
 
 main = do
-  print $ fn 37 29 83 14
-        + fn $# app4 38 26 81 28 
-        + fn $# (39, (23, (47, (22, ()))))
+  print $ fn 31 32 33 34
+        + fn $# app4 41 42 43 44 
+        + fn $# (51, (52, (53, (54, ()))))
+        + sum (mapWith (fn ^-> constInj) [101, 102])  --this not, presumably since we need to arrange for the first arg to fn to come from the list, then the subsequent args from the injector.
+        + sum (map (fn $# app3 71 72 73) [101, 102])  --inlined
 
 fn :: Int -> Int -> Int -> Int -> Int
 fn w x y z | w > 10 = fn (w - 6) (x - 15) (y - 7) (z - 8)
            | otherwise = w + x + y + z
+
+constInj :: Injector a (App3 Int Int Int)
+constInj = Injector (\_ _ -> (app3 61 62 63, ())) ()
 
 {-
 after:
