@@ -66,7 +66,7 @@ benchmark perf-prev-next-baseline
   default-language:    Haskell2010        
   build-depends:       base
 
---cabal bench perf-ind-end-baseline --ghc-options="-O2 -fforce-recomp -fno-prof-auto" --benchmark-options="+RTS -P -hd"
+--cabal bench perf-ind-end-baseline --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd"
 --hp2ps -e8in -c perf-ind-end-baseline.hp
 benchmark perf-ind-end-baseline
   main-is:             IndEndBaseline.hs
@@ -75,7 +75,7 @@ benchmark perf-ind-end-baseline
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench perf-foldl-baseline --ghc-options="-O2 -fforce-recomp -fno-prof-auto" --benchmark-options="+RTS -P -hd"
+--cabal bench perf-foldl-baseline --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd"
 --hp2ps -e8in -c perf-foldl-baseline.hp
 benchmark perf-foldl-baseline
   main-is:             FoldlBaseline.hs
@@ -84,7 +84,7 @@ benchmark perf-foldl-baseline
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench perf-prev-next --ghc-options="-O2 -fforce-recomp -fno-prof-auto" --benchmark-options="+RTS -P -hd"
+--cabal bench perf-prev-next --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd"
 --hp2ps -e8in -c perf-prev-next.hp
 benchmark perf-prev-next
   main-is:             PrevNext.hs
@@ -95,7 +95,7 @@ benchmark perf-prev-next
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench perf-ind-end --ghc-options="-O2 -fforce-recomp -fno-prof-auto" --benchmark-options="+RTS -P -hd"
+--cabal bench perf-ind-end --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd"
 --hp2ps -e8in -c perf-ind-end.hp
 benchmark perf-ind-end
   main-is:             IndEnd.hs
@@ -106,7 +106,7 @@ benchmark perf-ind-end
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench perf-foldl --ghc-options="-O2 -fforce-recomp -fno-prof-auto" --benchmark-options="+RTS -P -hd"
+--cabal bench perf-foldl --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd"
 --hp2ps -e8in -c perf-foldl.hp
 benchmark perf-foldl
   main-is:             Foldl.hs
@@ -117,7 +117,7 @@ benchmark perf-foldl
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench CurryNPerf --ghc-options="-O2 -fforce-recomp -ddump-simpl -dsuppress-all -fno-prof-auto" > CurryNPerf.core
+--cabal bench CurryNPerf --ghc-options="-O2 -ddump-simpl -dsuppress-all -fno-prof-auto" > CurryNPerf.core
 benchmark CurryNPerf
   main-is:             CurryNPerf.hs
   Other-modules:       CurryN
