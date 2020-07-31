@@ -5,7 +5,7 @@ import Data.Traversable (mapAccumR)
 main = do
   print $ sum $ withEndIx xxx [1..1000000]
 
-{-# SCC xxx #-}
+{-# SCC xxx #-} --crumbs, only seems to work if we have the type declaration.
 xxx :: Int -> Int -> Int
 xxx n nEndInd = n + nEndInd
 
