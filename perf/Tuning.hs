@@ -1,14 +1,19 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 import Data.Traversable (mapAccumL)
 import MapWith
 import CurryN
 
-main = mainB'
+main = mainA
+
+mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
 -- This demostrates that the 61 is not "inlined" (at bce9a33), just like in the MultiInjectors branch. But could it be?
 
-mainB = print $ sum $ mapWith (fn2 ^-> constInjB) [101, 102]
+mainB = print $ sum $ mapWith (fn2 ^-> constInjB) $ take 100 primes
 
 fn2 :: Int -> Int -> Int
 fn2 w x | w > 10 = fn2 (w - 6) (x - 15)
@@ -81,15 +86,35 @@ perf ind-end:
 	total time  =        0.31 secs   (311 ticks @ 1000 us, 1 processor)
 	total alloc = 392,046,128 bytes  (excludes profiling overheads)
 
+perf-prev-next:
 	total time  =        0.20 secs   (199 ticks @ 1000 us, 1 processor)
 	total alloc = 512,045,968 bytes  (excludes profiling overheads)
 
-so a slight degradation.
+so a slight degradation.  Why?
+
+Comparing mainB: curry & uncurry (with INLINE/ABLEs) are identical.
+
+Comparing mainA, curry has case i_a5xN of { (arg1_au0, moreArgs1_au1), so is not inlining the recursive uncurryN calls.
+(Although we can see from CurryNPerf that (surpisingly?) it is capable of doing so).
+
+Now with INLINABLE in eltIx etc:
+-- perf-ind-end:
+	total time  =        0.16 secs   (164 ticks @ 1000 us, 1 processor)
+	total alloc = 216,045,936 bytes  (excludes profiling overheads)
+(Hmmm better that the baseline???)
+
+-- perf-prev-next:
+	total time  =        0.18 secs   (182 ticks @ 1000 us, 1 processor)
+	total alloc = 512,045,968 bytes  (excludes profiling overheads)
 -}
 
 
+
+
+
+
 --But:
-mainC = print $ sum $ injFwd constInjC fn2 [101, 102]
+mainC = print $ sum $ injFwd constInjC fn2 $ take 100 primes
 
 constInjC :: Injector a Int
 constInjC = Injector (\_ _ -> (62, ())) ()
@@ -119,16 +144,18 @@ mainE = print $ sum $ myMapWith (fn2 ^*> constInjE) $ take 100 primes
 constInjE :: Injector a Int
 constInjE = Injector (\_ _ -> (64, ())) ()
 
-data InjectedFn a b
-  = forall l r. InjectedFnLR (a -> l -> r -> b) (Injector a l) (Injector a r)
-  | forall l  . InjectedFnL  (a -> l      -> b) (Injector a l)
-  | forall   r. InjectedFnR  (a      -> r -> b)                (Injector a r)
+data MyInjectedFn a b
+  = forall l r. MyInjectedFnLR (a -> l -> r -> b) (Injector a l) (Injector a r)
+  | forall l  . MyInjectedFnL  (a -> l      -> b) (Injector a l)
+  | forall   r. MyInjectedFnR  (a      -> r -> b)                (Injector a r)
 
-myMapWith (InjectedFnL  f (Injector gen z)) = snd . mapAccumL acc z
+myMapWith (MyInjectedFnL  f (Injector gen z)) = snd . mapAccumL acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
 
-f ^*> itL' = InjectedFnL (\a l   -> f a l) itL'
-  
+(^*>) :: (a -> i -> b) -> Injector a i -> MyInjectedFn a b
+f ^*> itL' = MyInjectedFnL (\a l   -> f a l) itL'
+
+
 -- still inlined! case $wfn_r7ho ww1_s79P 64# of ww2_s79X { __DEFAULT ->
 
 mainF = print $ sum $ myMapWith (fn3 ^*> constInjF ^**> constInjF') $ take 100 primes
@@ -140,7 +167,7 @@ constInjF' :: Injector a Int
 constInjF' = Injector (\_ _ -> (67, ())) ()
 
 
-InjectedFnL  f itL     ^**> itL' = InjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
+MyInjectedFnL  f itL     ^**> itL' = MyInjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
 
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
 injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
@@ -153,4 +180,31 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 -- even without -fspecialise-aggressively -fexpose-all-unfoldings
 
 
+--This is uses a local copy of Curry, and is inlined (so it is possible!)
+mainG = print $ sum $ myMapWith (fn2 ^+> myEltIx) $ take 100 primes
 
+myEltIx :: Integral i => Injector a (i, ())
+myEltIx = Injector (\_ i -> ((i, ()), i+1)) 0
+
+(^+>) :: MyCurryN i b => (a -> MyFnType i b) -> Injector a i -> MyInjectedFn a b
+f ^+> itL' = MyInjectedFnL (\a l   -> f a $## l) itL'
+
+($##) :: MyCurryN args r => MyFnType args r -> args -> r
+f $## args = (myUncurryN f) args
+
+class MyCurryN args r where
+  type MyFnType args r :: *
+  myUncurryN :: MyFnType args r -> args -> r
+
+instance MyCurryN () r where
+  type MyFnType () r = r
+  myUncurryN f () = f
+
+instance MyCurryN moreArgs r => MyCurryN (arg, moreArgs) r where
+  type MyFnType (arg, moreArgs) r = arg -> (MyFnType moreArgs r)
+  myUncurryN f (arg, moreArgs) = myUncurryN (f arg) moreArgs
+
+--mainH also uses local Curry, but eltIx from MapWith, and isn't inlined!
+mainH = print $ sum $ myMapWith (fn2 ^+> eltIx) $ take 100 primes
+
+--But is if we set INLINABLE on eltIx!

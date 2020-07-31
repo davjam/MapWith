@@ -147,6 +147,7 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 -- 
 -- #PredefinedInjectors#Use these (or custom 'Injector's) to create 'InjectedFn's that can be used with 'mapWith'
 
+{-# INLINABLE isLim #-}
 isLim :: Injector a (App1 Bool)
 isLim = Injector (\_ i -> (app1 i, False)) True
 -- ^ inject 'True' if the item is at the limit:
@@ -161,6 +162,7 @@ isLim = Injector (\_ i -> (app1 i, False)) True
 -- >>> let f = (\a b -> [a, ch b]); ch isLim = if isLim then '*' else ' ' in mapWith (f <-^ isLim) "12345"
 -- ["1 ","2 ","3 ","4 ","5*"]
 
+{-# INLINABLE eltIx #-}
 eltIx :: Integral i => Injector a (App1 i)
 eltIx = Injector (\_ i -> (app1 i, i+1)) 0
 -- ^ inject the item index:
@@ -173,6 +175,7 @@ eltIx = Injector (\_ i -> (app1 i, i+1)) 0
 -- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f <-^ eltIx) "freddy"
 -- ["f5","r4","e3","d2","d1","y0"]
 
+{-# INLINABLE eltFrom #-}
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
         -> Injector a (App1 i)
 eltFrom l = Injector (\_ s -> assert (not $ null s) (app1 $ head s, tail s)) l
@@ -191,6 +194,7 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (app1 $ head s, tail s)) l
 -- >>> drop 1 $ mapWith ((\_ i -> i) <-^ eltFrom [8,2]) "abc"
 -- [2,8]
 
+{-# INLINABLE eltFromMay #-}
 eltFromMay :: [i] -> Injector a (App1 (Maybe i))
 eltFromMay l = Injector (\_ s -> case s of []   -> (app1 Nothing , [])
                                            i:ix -> (app1 $ Just i, ix))
@@ -202,6 +206,7 @@ eltFromMay l = Injector (\_ s -> case s of []   -> (app1 Nothing , [])
 -- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f <-^ eltFromMay "ben") "sally"
 -- ["s-","a-","ln","le","yb"]
 
+{-# INLINABLE eltFromDef #-}
 eltFromDef :: i -> [i] -> Injector a (App1 i)
 eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
                                                i:ix -> (app1 i  , ix))
@@ -213,6 +218,7 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
 -- >>> let f a b = [a,b] in mapWith (f <-^ eltFromDef 'X' "ben") "sally"
 -- ["sX","aX","ln","le","yb"]
 
+{-# INLINABLE eltFromCycle #-}
 eltFromCycle :: NonEmpty i -> Injector a (App1 i)
 eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (app1 i, l)
                                              i :| y:yx -> (app1 i, y :| yx))
@@ -224,6 +230,7 @@ eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (app1 i, l)
 -- >>> let f a b = [a,b] in mapWith (f <-^ eltFromCycle (fromList "123")) "sally"
 -- ["s2","a1","l3","l2","y1"]
 
+{-# INLINABLE adjElt #-}
 adjElt :: Injector a (App1 (Maybe a))
 adjElt = Injector (\a prevMay -> (app1 prevMay, Just a)) Nothing
 -- ^ inject 'Just' the adjacent item:
@@ -238,6 +245,7 @@ adjElt = Injector (\a prevMay -> (app1 prevMay, Just a)) Nothing
 -- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f <-^ adjElt) "12345"
 -- ["12","23","34","45","5-"]
 
+{-# INLINABLE adj2Elts #-}
 adj2Elts :: Injector a (App2 (Maybe a) (Maybe a))
 adj2Elts = Injector (\a (prev1May, prev2May) -> (app2 prev1May prev2May, (Just a, prev1May))) (Nothing, Nothing)
 -- ^ like 'adjElt', but injects the two adjacent items into separate parameters.
@@ -247,6 +255,7 @@ adj2Elts = Injector (\a (prev1May, prev2May) -> (app2 prev1May prev2May, (Just a
 -- >>> let f a b c = [a,ch b,ch c]; ch = maybe '-' id in mapWith (f <-^ adj2Elts) "12345"
 -- ["123","234","345","45-","5--"]
 
+{-# INLINABLE foldlElts #-}
 foldlElts :: (i -> a -> i)
           -> i
           -> Injector a (App1 i)
@@ -272,6 +281,7 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (app1 s', s')) z
 -- >>> let f a b = a ++ show b in mapWith (f <-^ foldlElts (\l s -> l + length s) 0) ["every", "good", "boy"]
 -- ["every12","good7","boy3"]
 
+{-# INLINABLE foldl1Elts #-}
 foldl1Elts :: (a -> a -> a)
            -> Injector a (App1 a)
 foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (app1 s', Just s')) Nothing
