@@ -131,6 +131,7 @@ benchmark CurryNPerf
 benchmark tuning
   main-is:             Tuning.hs
   Other-modules:       MapWith
+                       CurryN
   hs-source-dirs:      src perf
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010

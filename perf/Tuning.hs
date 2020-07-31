@@ -2,6 +2,7 @@
 
 import Data.Traversable (mapAccumL)
 import MapWith
+import CurryN
 
 main = mainB'
 
@@ -13,8 +14,8 @@ fn2 :: Int -> Int -> Int
 fn2 w x | w > 10 = fn2 (w - 6) (x - 15)
         | otherwise = w + x
 
-constInjB :: Injector a Int
-constInjB = Injector (\_ _ -> (61, ())) ()
+constInjB :: Injector a (App1 Int)
+constInjB = Injector (\_ _ -> (app1 61, ())) ()
 
 {-
 Depends on INLINABLE in MapWith:
@@ -28,8 +29,8 @@ no          yes        case $wfn 102# 61# of ww_s93b
 
 mainB' = print $ sum $ mapWith (fn3 ^-> constInjB ^-> constInjB') $ take 100 primes
 
-constInjB' :: Injector a Int
-constInjB' = Injector (\_ _ -> (65, ())) ()
+constInjB' :: Injector a (App1 Int)
+constInjB' = Injector (\_ _ -> (app1 65, ())) ()
 
 fn3 :: Int -> Int -> Int -> Int
 fn3 w x y | w > 10 = fn3 (w - 6) (x - 15) (y + 2)
@@ -45,7 +46,7 @@ fn3 w x y | w > 10 = fn3 (w - 6) (x - 15) (y + 2)
 --HENCE INLINE on injPair and INLINABLE on mapWith seems to give best results.
 
 {-
-But - what does it do to performance of mainA?
+But - what does it do to performance of perf-ind-end?
 with INLINE/ABLEs: (2nd run)
 	total time  =        0.26 secs   (260 ticks @ 1000 us, 1 processor)
 	total alloc = 344,046,128 bytes  (excludes profiling overheads)
@@ -59,7 +60,7 @@ So pretty good! Vs "baseline":
 
 Hoorah!
 
-Checking prev/next:
+Checking perf-prev-next:
 with:
 	total time  =        0.17 secs   (169 ticks @ 1000 us, 1 processor)
 	total alloc = 488,045,968 bytes  (excludes profiling overheads)
@@ -74,6 +75,18 @@ baseline:
 
 Blimey.
 -}
+
+{- The above is all without the CurryN stuff. With it (amazingly) we still inline. Checking performance:
+perf ind-end:
+	total time  =        0.31 secs   (311 ticks @ 1000 us, 1 processor)
+	total alloc = 392,046,128 bytes  (excludes profiling overheads)
+
+	total time  =        0.20 secs   (199 ticks @ 1000 us, 1 processor)
+	total alloc = 512,045,968 bytes  (excludes profiling overheads)
+
+so a slight degradation.
+-}
+
 
 --But:
 mainC = print $ sum $ injFwd constInjC fn2 [101, 102]
