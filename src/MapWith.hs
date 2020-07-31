@@ -130,6 +130,7 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parame
 --
 -- or random values, etc.
 
+{-# INLINE injPair #-}
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
 injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
   where
@@ -311,6 +312,7 @@ foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (s', Just s'))
 -- |    3 | \'c\'  | 'True'  | 2       | 8       |
 -- +------+--------+---------+---------+---------+
 
+{-# INLINABLE mapWith #-}
 mapWith :: Traversable t
         => InjectedFn a b
         -> t a
