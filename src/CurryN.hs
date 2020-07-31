@@ -122,10 +122,10 @@ instead of
 
 Although these are only provided here for 1 to 4 arguments, you can use the "stacked tuple" to apply any number of arguments.
 -}
-{-# INLINE app1 #-}
-{-# INLINE app2 #-}
-{-# INLINE app3 #-}
-{-# INLINE app4 #-}
+{-# INLINABLE app1 #-}
+{-# INLINABLE app2 #-}
+{-# INLINABLE app3 #-}
+{-# INLINABLE app4 #-}
 
 type App1       a =             (a, ())
 -- ^ A "stacked tuple" of one value
