@@ -3,11 +3,16 @@
 import Data.Traversable (mapAccumL)
 import MapWith
 
-main = mainB'
 
--- This demostrates that the 61 is not "inlined" (at bce9a33), just like in the MultiInjectors branch. But could it be?
+--This file is for various experiments in tuning.
+--These have so far shown where addition of INLINABLE pragmas is very beneficial.
+--As a result, I now have comperable performance to the "baselines".
+--I don't (yet) have comperable performance to markbounds, which remains a challenge.
+
+main = mainH
 
 mainB = print $ sum $ mapWith (fn2 ^-> constInjB) [101, 102]
+-- This demostrates that the 61 is not "inlined" (at bce9a33), just like in the MultiInjectors branch. But could it be?
 
 fn2 :: Int -> Int -> Int
 fn2 w x | w > 10 = fn2 (w - 6) (x - 15)
@@ -139,5 +144,60 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 --inlined! case $wfn3 ww1_s7iF 66# 67# of ww2_s7iR { __DEFAULT ->
 -- even without -fspecialise-aggressively -fexpose-all-unfoldings
 
+--ABOVE here: gets perf equiv to "baselines". But they use mapAccumL/R, and don't seem to fuse.
+--Ideally I'd like performance similar to markbounds, so there's more work to do...
 
 
+mainG = print $ sum $ map fn2Tup $ markbounds [1..1000000]
+
+fn2Tup (x, True, _   ) = x + 10
+fn2Tup (x, _,    True) = x * 2
+fn2Tup (x, _,    _   ) = x
+
+markbounds :: [a] -> [(a, Bool, Bool)]
+markbounds [] = []
+markbounds [x] = [(x, True, True)]
+markbounds (x:xs) = (x, True, False) : tailbound xs
+  where
+    tailbound [y] = [(y, False, True)]
+    tailbound (y:ys) = (y, False, False): tailbound ys
+    
+    
+{- mainG:    
+	total time  =        0.10 secs   (99 ticks @ 1000 us, 1 processor)
+	total alloc = 176,045,824 bytes  (excludes profiling overheads)
+-}
+
+mainH = print $ sum $ withFirstLast fn2Args [1..1000000]
+
+fn2Args x True  _    = x + 10
+fn2Args x _     True = x * 2
+fn2Args x _     _    = x
+
+{- mainH:
+	total time  =        0.29 secs   (290 ticks @ 1000 us, 1 processor)
+	total alloc = 488,045,920 bytes  (excludes profiling overheads)
+-}
+
+
+mainI = print $ sum ([1..1000000] :: [Int])
+
+{-  Very good: doesn't create a list.
+
+	total time  =        0.00 secs   (0 ticks @ 1000 us, 1 processor)
+	total alloc =      45,912 bytes  (excludes profiling overheads)
+
+$wgo
+  = \ counter sumSoFar ->
+      case counter of counter' {
+        __DEFAULT -> $wgo (+# counter' 1#) (+# sumSoFar counter');
+        1000000# -> +# sumSoFar 1000000#
+      }
+
+main2
+  = case $wgo 1# 0# of theSum { __DEFAULT ->
+    case $wshowSignedInt 0# theSum [] of { (# showRslt1, showRslt2 #) ->
+    : showRslt1 showRslt12
+    }
+    }
+-}
