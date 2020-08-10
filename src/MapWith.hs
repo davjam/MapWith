@@ -65,7 +65,7 @@ where
 import CurryN
 
 import Data.Foldable (fold)
-import Data.List.NonEmpty (NonEmpty(..), fromList)
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
@@ -479,7 +479,7 @@ nextElt f = f <-^ adjElt
 -- ^ 'adjElt', from the right.
 
 isEven :: Injectable f => f a (Bool -> b) -> InjectedFn a b
-isEven f = f ^-> eltFromCycle (fromList [True, False])
+isEven f = f ^-> Injector (\_ s -> (app1 s, not s)) True
 -- ^ True if an even-numbered (0th, 2nd, 4th, etc) item.
 
 -- $PrePackagedMaps

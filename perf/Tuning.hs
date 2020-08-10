@@ -8,7 +8,7 @@ import Data.Function ((&))
 import MapWith
 import CurryN
 
-main = mainN
+main = mainP
 
 mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
@@ -269,13 +269,31 @@ main2
 mainM = print $ sum $ mapWith (fn1Arg & isFirst) [1..1000000]
 -- perfect!
 fn1Arg :: Int -> Bool -> Int
-fn1Arg n True  = n * 2
+fn1Arg n True  = n * 78
 fn1Arg n False = n
 --{-# NOINLINE fn1Arg #-}
 
-mainN = print $ sum $ mapWith (fn4 ^-> adjElt) [5,10..1000000]
+mainN = print $ sum $ mapWith (fn4 & prevElt) [1..1000000]
 --also perfect!
 fn4 :: Int -> Maybe Int -> Int
 fn4 x (Just y) = x + y
 fn4 x Nothing = x * 2
+
+mainP = print $ sum $ mapWith (fn1Arg & isEven) [1..1000000]
+--perfect with Injector-based isEven.
+
+{- Wow! It does two numbers with each loop!
+main_$s$wgo
+  = \ sumSoFar n ->
+      case n of n' {
+        __DEFAULT ->
+          let { nPlus1 = +# n' 1# } in
+          main_$s$wgo (+# (+# sumSoFar (*# n' 78#)) nPlus1) (+# nPlus1 1#);
+        999999# -> +# (+# sumSoFar 77999922#) 1000000#;
+        1000000# -> +# sumSoFar 78000000#
+      }
+
+main2
+  = case main_$s$wgo 0# 1# of and ...
+-}
 
