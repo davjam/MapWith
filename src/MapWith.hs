@@ -390,6 +390,7 @@ flipSeqMapAccumL x !_n = x
 
 {-# INLINE [0] listMapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
 --{-# INLINE listMapAccumLFB #-}
+listMapAccumLFB :: (a -> b -> b) -> (s -> a -> (s, a)) -> a -> (s -> b) -> s -> b
 listMapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 
 
