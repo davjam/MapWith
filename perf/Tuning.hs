@@ -4,10 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 import Data.Traversable (mapAccumL)
+import Data.Function ((&))
 import MapWith
 import CurryN
 
-main = mainK
+main = mainN
 
 mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
@@ -212,7 +213,6 @@ mainH = print $ sum $ myMapWith (fn2 ^+> eltIx) $ take 100 primes
 --ABOVE here: gets perf equiv to "baselines". But they use mapAccumL/R, and don't seem to fuse.
 --Ideally I'd like performance similar to markbounds, so there's more work to do...
 
-
 mainJ = print $ sum $ map fn2Tup $ markbounds [1..1000000]
 
 fn2Tup (x, True, _   ) = x + 10
@@ -265,4 +265,17 @@ main2
     }
     }
 -}
+
+mainM = print $ sum $ mapWith (fn1Arg & isFirst) [1..1000000]
+-- perfect!
+fn1Arg :: Int -> Bool -> Int
+fn1Arg n True  = n * 2
+fn1Arg n False = n
+--{-# NOINLINE fn1Arg #-}
+
+mainN = print $ sum $ mapWith (fn4 ^-> adjElt) [5,10..1000]
+--also perfect!
+fn4 :: Int -> Maybe Int -> Int
+fn4 x (Just y) = x + y
+fn4 x Nothing = x * 2
 

@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- |
 -- Module      : MapWith
@@ -68,6 +69,7 @@ import Data.List.NonEmpty (NonEmpty(..), fromList)
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
+import GHC.Base (build)
 
 -- $TypeNames
 -- These names are used for types and variables throughout:
@@ -341,11 +343,11 @@ mapWith :: Traversable t
         => InjectedFn a b
         -> t a
         -> t b
-mapWith (InjectedFnL  f (Injector gen z)) = snd . mapAccumL acc z
+mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
 mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR accR zR . snd . mapAccumL accL zL
+mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR accR zR . mySnd . myMapAccumL accL zL
   where accL s  a       = let (i, s') = genL a s in (s', (a, f a i))
         accR s (a, fal) = let (i, s') = genR a s in (s',     fal i )
 {-
@@ -357,6 +359,39 @@ mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 --
 -- Parameters (as defined in the 'InjectedFn') are passed to a map function (embedded in the 'InjectedFn'), in addition to the elements of the 'Traversable'.
+
+--{-# NOINLINE [1] myMapAccumL #-}  --cf {-# NOINLINE [1] unsafeTake #-}
+{-# NOINLINE myMapAccumL #-}
+myMapAccumL :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> (s, t b)
+myMapAccumL = mapAccumL
+
+--{-# NOINLINE [1] mySnd #-}  --for same reason
+{-# NOINLINE mySnd #-}
+mySnd :: (a, b) -> b
+mySnd (_, x) = x
+
+{-# RULES
+"listMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
+  build (\c nil -> foldr (listMapAccumLFB c f) (\_s -> nil) xs z)
+ #-}
+
+{-
+{-# RULES
+"listMapAccumL" forall f z xs. mySnd (myMapAccumL f z xs) =
+  build (\c nil -> foldr (listMapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
+ #-}
+-}
+
+
+{-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
+--{-# INLINE flipSeqMapAccumL #-}
+flipSeqMapAccumL :: a -> Int -> a
+flipSeqMapAccumL x !_n = x
+
+{-# INLINE [0] listMapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
+--{-# INLINE listMapAccumLFB #-}
+listMapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
+
 
 mapWithM :: (Traversable t, Monad m) => InjectedFn a (m b) -> t a -> m (t b)
 mapWithM f = sequence . mapWith f
