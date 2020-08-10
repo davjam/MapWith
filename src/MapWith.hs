@@ -360,38 +360,33 @@ mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR
 --
 -- Parameters (as defined in the 'InjectedFn') are passed to a map function (embedded in the 'InjectedFn'), in addition to the elements of the 'Traversable'.
 
---{-# NOINLINE [1] myMapAccumL #-}  --cf {-# NOINLINE [1] unsafeTake #-}
-{-# NOINLINE myMapAccumL #-}
+{-# NOINLINE [1] myMapAccumL #-}  --cf {-# NOINLINE [1] unsafeTake #-}
 myMapAccumL :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> (s, t b)
 myMapAccumL = mapAccumL
 
---{-# NOINLINE [1] mySnd #-}  --for same reason
-{-# NOINLINE mySnd #-}
+{-# NOINLINE [1] mySnd #-}  --for same reason
 mySnd :: (a, b) -> b
 mySnd (_, x) = x
 
 {-# RULES
 "listMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (listMapAccumLFB c f) (\_s -> nil) xs z)
+  build (\c nil -> foldr (listMapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
  #-}
-
-{-
-{-# RULES
-"listMapAccumL" forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (listMapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
- #-}
--}
-
-
-{-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
---{-# INLINE flipSeqMapAccumL #-}
-flipSeqMapAccumL :: a -> Int -> a
-flipSeqMapAccumL x !_n = x
 
 {-# INLINE [0] listMapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
---{-# INLINE listMapAccumLFB #-}
 listMapAccumLFB :: (a -> b -> b) -> (s -> a -> (s, a)) -> a -> (s -> b) -> s -> b
 listMapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
+
+{- flipSeqMapAccumL just isn't working for me. As soon as I add it, the fusion stops.
+{-# RULES
+"listMapAccumL" [~1] forall f z xs. mySnd (myMapAccumL f z xs) =
+  build (\c nil -> foldr (listMapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
+ #-}
+ 
+{-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
+flipSeqMapAccumL :: a -> Int -> a
+flipSeqMapAccumL x !_n = x
+-}
 
 
 mapWithM :: (Traversable t, Monad m) => InjectedFn a (m b) -> t a -> m (t b)

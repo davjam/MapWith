@@ -273,7 +273,7 @@ fn1Arg n True  = n * 2
 fn1Arg n False = n
 --{-# NOINLINE fn1Arg #-}
 
-mainN = print $ sum $ mapWith (fn4 ^-> adjElt) [5,10..1000]
+mainN = print $ sum $ mapWith (fn4 ^-> adjElt) [5,10..1000000]
 --also perfect!
 fn4 :: Int -> Maybe Int -> Int
 fn4 x (Just y) = x + y
