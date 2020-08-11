@@ -297,3 +297,33 @@ main2
   = case main_$s$wgo 0# 1# of and ...
 -}
 
+mainQ = print $ sum $ mapWith (fn1Arg <-^ isLim) [1..1000000]
+
+{- With myMapAccumR fusion attempt:
+
+	total time  =        0.08 secs   (79 ticks @ 1000 us, 1 processor)
+	total alloc =  72,045,872 bytes  (excludes profiling overheads)
+
+
+$wgo    (prev means "to the right")
+  = \ n ->
+      (# False,
+         \ x ->
+           case n {
+             __DEFAULT ->
+               case $wgo (+# n 1#) of { (# prevState, prevFn #) ->
+               prevFn
+                 (case prevState of {
+                    False -> I# (+# x n);
+                    True -> I# (+# x (*# n 78#))
+                  })
+               };
+             1000000# -> (+# x 78000000#) }
+           } #)
+
+main2
+  = case $wgo 1# of { (# _, ansFn #) ->
+    case ansFn 0# of { I# ans ->
+    case $wshowSignedInt 0# ans ...
+
+-}

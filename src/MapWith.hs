@@ -345,9 +345,9 @@ mapWith :: Traversable t
         -> t b
 mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
+mapWith (InjectedFnR  f (Injector gen z)) = mySnd . myMapAccumR acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR accR zR . mySnd . myMapAccumL accL zL
+mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = mySnd . myMapAccumR accR zR . mySnd . myMapAccumL accL zL
   where accL s  a       = let (i, s') = genL a s in (s', (a, f a i))
         accR s (a, fal) = let (i, s') = genR a s in (s',     fal i )
 {-
@@ -368,13 +368,13 @@ myMapAccumL = mapAccumL
 mySnd :: (a, b) -> b
 mySnd (_, x) = x
 
-{-# RULES
+{-# RULES --modelled on "take".
 "listMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
   build (\c nil -> foldr (listMapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
  #-}
 
 {-# INLINE [0] listMapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
-listMapAccumLFB :: (a -> b -> b) -> (s -> a -> (s, a)) -> a -> (s -> b) -> s -> b
+listMapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
 listMapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 
 {- flipSeqMapAccumL just isn't working for me. As soon as I add it, the fusion stops.
@@ -388,6 +388,18 @@ flipSeqMapAccumL :: a -> Int -> a
 flipSeqMapAccumL x !_n = x
 -}
 
+{-# NOINLINE [1] myMapAccumR #-}  
+myMapAccumR :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> (s, t b)
+myMapAccumR = mapAccumR
+
+{-# RULES --modelled on "scanr".
+"listMapAccumR" [~1]  forall f z xs. mySnd (myMapAccumR f z xs) =
+  build (\c nil -> snd $ foldr (listMapAccumRFB c f) (z, nil) xs)
+ #-}
+
+--{-# INLINE [0] listMapAccumRFB #-}
+listMapAccumRFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s, r) -> (s, r)
+listMapAccumRFB c f = \x ~(s, ys) -> let (s', y) = f s x in (s', y `c` ys)
 
 mapWithM :: (Traversable t, Monad m) => InjectedFn a (m b) -> t a -> m (t b)
 mapWithM f = sequence . mapWith f
@@ -485,6 +497,7 @@ isEven f = f ^-> Injector (\_ s -> (app1 s, not s)) True
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
 
+{-# INLINABLE withFirstLast #-}
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
 withFirstLast f = mapWith $ f & isFirst & isLast
 -- ^ Maps over a 'Traversable', with additional parameters indicating whether an item is the first or last (or both) in the list.
@@ -492,10 +505,12 @@ withFirstLast f = mapWith $ f & isFirst & isLast
 -- >>> let f x isFirst isLast = star isFirst ++ x ++ star isLast; star b = if b then "*" else "" in withFirstLast f ["foo", "bar", "baz"]
 -- ["*foo", "bar", "baz*"]
 
+{-# INLINABLE andFirstLast #-}
 andFirstLast :: Traversable t => t a -> t (a, Bool, Bool)
 andFirstLast = withFirstLast (,,)
 -- ^ > andFirstLast = withFirstLast (,,)
 
+{-# INLINABLE withPrevNext #-}
 withPrevNext :: Traversable t => (a -> Maybe a -> Maybe a -> b) -> t a -> t b
 withPrevNext f = mapWith $ f & prevElt & nextElt
 -- ^ Maps over a 'Traversable', with additional parameters indicating the previous and next elements.
@@ -505,6 +520,7 @@ withPrevNext f = mapWith $ f & prevElt & nextElt
 -- >>> let f x prvMay nxtMay = maybe "*" (cmp x) prvMay ++ x ++ maybe "*" (cmp x) nxtMay; cmp x y = show $ compare x y in withPrevNext f ["foo", "bar", "baz"]
 -- ["*fooGT","LTbarLT","GTbaz*"]
 
+{-# INLINABLE andPrevNext #-}
 andPrevNext :: Traversable t => t a -> t (a, Maybe a, Maybe a)
 andPrevNext = withPrevNext (,,)
 -- ^ > andPrevNext = withPrevNext (,,)
