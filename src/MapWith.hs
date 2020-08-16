@@ -499,27 +499,27 @@ mySnd :: (a, b) -> b
 mySnd (_, x) = x
 
 {-# RULES --modelled on "take".
-"listMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (listMapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
+"sndMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
+  build (\c nil -> foldr (mapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
  #-}
 
-{-# INLINE [0] listMapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
-listMapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
-listMapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
+{-# INLINE [0] mapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
+mapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
+mapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 
 {-# RULES --modelled on "scanr".
-"listMapAccumR" [~1]  forall f z xs. mySnd (myMapAccumR f z xs) =
-  build (\c nil -> snd $ foldr (listMapAccumRFB c f) (z, nil) xs)
+"sndMapAccumR" [~1]  forall f z xs. mySnd (myMapAccumR f z xs) =
+  build (\c nil -> mySnd $ foldr (mapAccumRFB c f) (z, nil) xs)
  #-}
 
---{-# INLINE [0] listMapAccumRFB #-}
-listMapAccumRFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s, r) -> (s, r)
-listMapAccumRFB c f = \x ~(s, ys) -> let (s', y) = f s x in (s', y `c` ys)
+{-# INLINE [0] mapAccumRFB #-}
+mapAccumRFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s, r) -> (s, r)
+mapAccumRFB c f = \x ~(s, ys) -> let (s', y) = f s x in (s', y `c` ys)
 
 {- flipSeqMapAccumL just isn't working for me. As soon as I add it, the fusion stops.
 {-# RULES
 "listMapAccumL" [~1] forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (listMapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
+  build (\c nil -> foldr (mapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
  #-}
  
 {-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
