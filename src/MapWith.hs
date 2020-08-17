@@ -345,17 +345,14 @@ mapWith :: Traversable t
         -> t b
 mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnR  f (Injector gen z)) = mySnd . myMapAccumR acc z
+mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = mySnd . myMapAccumR accR zR . mySnd . myMapAccumL accL zL
-  where accL s  a       = let (i, s') = genL a s in (s', (a, f a i))
-        accR s (a, fal) = let (i, s') = genR a s in (s',     fal i )
-{-
---This may be clever, but actually slower, and the generation of the (a,f) tuples above doesn't seem to add much time/heap.
-mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = snd . mapAccumR accR zR . snd . mapAccumL accL zL
-  where accL sl a   = let (l, sl') = genL a sl in (sl', \sr -> let (r, sr') = genR a sr in (sr', f a l r))
-        accR sr fsr = fsr sr
--}
+mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = mySnd . myMapAccumL accL zL . snd . mapAccumR accR zR
+  --have mapAccumR store values (not parial function applications), then the storage will be PINNED, not on stack.
+  --the (possibly fused) myMapAccumL can tail recurse/loop over the data, building the state/injector values as it goes.
+  --(Data/partial functions stored during recusion unwind can cause very slow behaviour on huge lists).
+  where accR s a       = let (ir, s') = genR a s in (s', (a, ir))
+        accL s (a, ir) = let (il, s') = genL a s in (s', (f a il ir))
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 --
 -- Parameters (as defined in the 'InjectedFn') are passed to a map function (embedded in the 'InjectedFn'), in addition to the elements of the 'Traversable'.
@@ -490,31 +487,22 @@ andPrevNext = withPrevNext (,,)
 myMapAccumL :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> (s, t b)
 myMapAccumL = mapAccumL
 
-{-# NOINLINE [1] myMapAccumR #-}  
-myMapAccumR :: Traversable t => (s -> a -> (s, b)) -> s -> t a -> (s, t b)
-myMapAccumR = mapAccumR
-
 {-# NOINLINE [1] mySnd #-}
 mySnd :: (a, b) -> b
-mySnd (_, x) = x
+mySnd = snd
 
 {-# RULES --modelled on "take".
 "sndMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
   build (\c nil -> foldr (mapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
  #-}
+ {-
+"sndMapAccumLList" [1]  forall f z xs. foldr (mapAccumLFB (:) f) (\_s -> []) xs z = 
+  mySnd (myMapAccumL f z xs)
+  -}
 
 {-# INLINE [0] mapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
 mapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
 mapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
-
-{-# RULES --modelled on "scanr".
-"sndMapAccumR" [~1]  forall f z xs. mySnd (myMapAccumR f z xs) =
-  build (\c nil -> mySnd $ foldr (mapAccumRFB c f) (z, nil) xs)
- #-}
-
-{-# INLINE [0] mapAccumRFB #-}
-mapAccumRFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s, r) -> (s, r)
-mapAccumRFB c f = \x ~(s, ys) -> let (s', y) = f s x in (s', y `c` ys)
 
 {- flipSeqMapAccumL just isn't working for me. As soon as I add it, the fusion stops.
 {-# RULES
