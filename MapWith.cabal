@@ -144,6 +144,8 @@ benchmark tuning
 --cabal bench benchmarks --ghc-options="-O2 -ddump-simpl -dsuppress-all -ddump-to-file -fno-prof-auto"
 --cabal bench benchmarks --ghc-options="-O2 -ddump-rule-firings -fno-prof-auto"
 --cabal bench benchmarks --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P"
+--cabal bench benchmarks --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd -xt"
+--hp2ps -e8in -c benchmarks.hp
 benchmark benchmarks
   main-is:             Benchmarks.hs
   Other-modules:       MapWith
