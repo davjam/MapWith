@@ -97,7 +97,23 @@ class CurryN args r where
   -}
   uncurryN :: FnType args r -> args -> r
 
-class Simpl args where
+-- | the application of zero arguments, giving @r@
+instance CurryN () r where
+  type FnType () r = r
+  curryN f = f ()
+  uncurryN f () = f
+
+-- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
+instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
+  type FnType (arg, moreArgs) r = arg -> (FnType moreArgs r)
+  curryN f a = curryN (\t -> f (a, t))
+  uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
+
+-- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
+($#) :: CurryN args r => FnType args r -> args -> r
+f $# args = (uncurryN f) args
+
+class Simpl args where        --converts a function of one arg, to a fn of one arg, but with a simpler representation of the arg.
   type SimplType args :: *                              --SimplType (Int, ()) = Int
   simplFnA :: (args -> r) -> (SimplType args -> r)
   simplFnB :: args -> SimplType args
@@ -116,23 +132,7 @@ instance Simpl (App2 a b) where
   type SimplType (a, (b, ())) = (a, b)
   simplFnA f = \(a, b) -> f $ app2 a b
   simplFnB (a, (b, ())) = (a, b)
-
--- | the application of zero arguments, giving @r@
-instance CurryN () r where
-  type FnType () r = r
-  curryN f = f ()
-  uncurryN f () = f
-
--- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
-instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
-  type FnType (arg, moreArgs) r = arg -> (FnType moreArgs r)
-  curryN f a = curryN (\t -> f (a, t))
-  uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
-
--- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
-($#) :: CurryN args r => FnType args r -> args -> r
-f $# args = (uncurryN f) args
-
+  
 {- $StackingFunctions
 These types and functions can make code that uses the "stacked tupples" look a little less weird. For example, you can write:
 
