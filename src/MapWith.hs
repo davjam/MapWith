@@ -421,7 +421,7 @@ instance Injectable InjectedFn where
 
 --  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
   (<-^) :: forall a i b. (Simpl i, CurryN i b) => InjectedFn a (FnType i b) -> Injector a i -> InjectedFn a b
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> simplFnA (uncurryN $ f a l)   r')          itL                 (simplInj itR')
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> simplFnA @i (uncurryN $ f a l)   r')          itL                 (simplInj itR')
 
   InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r $# r')                 (injPair itR itR')
   InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r $# r')          itL    (injPair itR itR')
