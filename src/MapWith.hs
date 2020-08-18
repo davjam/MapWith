@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- |
 -- Module      : MapWith
@@ -395,7 +397,7 @@ class Injectable m where
   -- | Inject "from the left"
   (^->) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
-  (<-^) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (<-^) :: (Simpl i, CurryN i b) => m a (FnType i b) -> Injector a i -> InjectedFn a b
 
 -- ^ An 'Injectable' is (recursively) either:
 --
@@ -417,9 +419,15 @@ instance Injectable InjectedFn where
   InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r $# l')          itL'            itR
   InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r $# l') (injPair itL itL')       itR
 
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
+--  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
+  (<-^) :: forall a i b. (Simpl i, CurryN i b) => InjectedFn a (FnType i b) -> Injector a i -> InjectedFn a b
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> simplFnA (uncurryN $ f a l)   r')          itL                 (simplInj itR')
+
   InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r $# r')                 (injPair itR itR')
   InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r $# r')          itL    (injPair itR itR')
+  
+simplInj :: Simpl i => Injector a i -> Injector a (SimplType i)
+simplInj (Injector nxt z) = let nxt' = (\a s -> let (i, s') = nxt a s in (simplFnB i, s')) in Injector nxt' z
 
 -- $PrecombinedInjectors
 -- These are combinations of '^->' or '<-^' with [pre-defined injectors](#PredefinedInjectors).

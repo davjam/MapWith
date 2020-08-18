@@ -36,6 +36,8 @@ module CurryN
   
   -- * Other Implementations
   -- $SeeAlso
+  
+  , Simpl(..)
   )
 where
 
@@ -94,6 +96,26 @@ class CurryN args r where
     "x222hello"
   -}
   uncurryN :: FnType args r -> args -> r
+
+class Simpl args where
+  type SimplType args :: *                              --SimplType (Int, ()) = Int
+  simplFnA :: (args -> r) -> (SimplType args -> r)
+  simplFnB :: args -> SimplType args
+
+instance Simpl () where
+  type SimplType () = ()
+  simplFnA f = f
+  simplFnB () = ()
+
+instance Simpl (App1 a) where
+  type SimplType (a, ()) = a
+  simplFnA f = \a -> f $ app1 a
+  simplFnB (a, ()) = a
+  
+instance Simpl (App2 a b) where  
+  type SimplType (a, (b, ())) = (a, b)
+  simplFnA f = \(a, b) -> f $ app2 a b
+  simplFnB (a, (b, ())) = (a, b)
 
 -- | the application of zero arguments, giving @r@
 instance CurryN () r where
