@@ -62,8 +62,15 @@ tests =
   , mapWith (testFn0 <-^ foldl1Elts (-)   ) [9, 1, 8] == [-2,  7, 8]
   , mapWith (testFn0 ^-> foldlElts  (-) 20) [9, 1, 8] == [11, 10, 2] 
   , mapWith ((,,,) ^-> adj2Elts & isLast) "fred" ==[('f',Nothing,Nothing,False),('r',Just 'f',Nothing,False),('e',Just 'r',Just 'f',False),('d',Just 'e',Just 'r',True)]
+--, length (scoreWeek [1,2..168]) == 168  --hangs in GHC 8.4.3 (per https://gitlab.haskell.org/ghc/ghc/-/issues/16943)
+  , length (mapWeek [1,2..168]) == 168    --I don't think we have quite the same situation, and I think I've tested lots of infinite list cases already, but trying to be safe.
   ]
 
 main | and tests = exitSuccess
      | otherwise = exitFailure
 
+scoreWeek :: [Int] -> [[Int]]
+scoreWeek xs = take 168 $ scanr (:) [] $ cycle xs
+
+mapWeek :: [Int] -> [Int]
+mapWeek xs = take 168 $ mapWith (testFn0 ^-> eltIx) $ cycle xs

@@ -10,7 +10,7 @@ import Data.Function ((&))
 import MapWith
 import CurryN
 
-main = mainFUe
+main = mainX
 
 mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
@@ -446,3 +446,4 @@ fnBool :: Int -> Bool -> Int
 fnBool n True  = n * 9
 fnBool n False = n * 8
 
+mainX = print $ sum $ take 100000000 $ mapWith (fnBool & isFirst) (repeat (100 :: Int))

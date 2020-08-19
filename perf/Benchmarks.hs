@@ -44,6 +44,13 @@ testFn 21 n = withPrevNextRec  fnAdjAdj                   [1..n]
 testFn 22 n = withPrevNextZip  fnAdjAdj                   [1..n]
 testFn 23 n = withPrevNext     fnAdjAdj                   [1..n]
 
+--Some more fusion tests:
+testFn 100 n = take n $ mapWith (fnBool & isFirst) $ repeat (100 :: Int)
+testFn 101 n = take n $ withFirstLast fnBoolBool   $ repeat (100 :: Int)
+testFn 102 n = take n $ withFirstLast fnBoolBool   $ cycle  ([10,15,19,2] :: [Int])
+testFn 103 n = take n $ map fnBoolBoolTup $ markbounds $ repeat (100 :: Int)
+testFn 104 n = take n $ map fnBoolBoolTup $ markbounds $ cycle  ([10,15,19,2] :: [Int])
+
 --Hand crafted alternatives to mapWith
 
 --recursive
