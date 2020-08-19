@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE BangPatterns #-}
 
 -- |
 -- Module      : MapWith
@@ -493,10 +494,10 @@ mySnd = snd
 
 {-# RULES --modelled on "take".
 "sndMapAccumL" [~1]  forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (mapAccumLFB c f) (\_s -> nil) xs z)         --do I need (\_s -> _s `seq` nil), per comment https://hackage.haskell.org/package/base-4.14.0.0/docs/src/GHC.List.html#flipSeqTake
+  build (\c nil -> foldr (mapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
  #-}
  {-
-"sndMapAccumLList" [1]  forall f z xs. foldr (mapAccumLFB (:) f) (\_s -> []) xs z = 
+"sndMapAccumLList" [1]  forall f z xs. foldr (mapAccumLFB (:) f) (flipSeqMapAccumL []) xs z = 
   mySnd (myMapAccumL f z xs)
   -}
 
@@ -504,15 +505,7 @@ mySnd = snd
 mapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
 mapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 
-{- flipSeqMapAccumL just isn't working for me. As soon as I add it, the fusion stops.
-{-# RULES
-"listMapAccumL" [~1] forall f z xs. mySnd (myMapAccumL f z xs) =
-  build (\c nil -> foldr (mapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
- #-}
- 
 {-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
-flipSeqMapAccumL :: a -> Int -> a
-flipSeqMapAccumL x !_n = x
--}
-
+flipSeqMapAccumL :: a -> s -> a
+flipSeqMapAccumL x !_s = x
 
