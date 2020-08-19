@@ -3,12 +3,14 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 
+module Main (main) where
+
 import Data.Traversable (mapAccumL)
 import Data.Function ((&))
 import MapWith
 import CurryN
 
-main = mainP
+main = mainFUe
 
 mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
@@ -327,3 +329,120 @@ main2
     case $wshowSignedInt 0# ans ...
 
 -}
+
+
+-- FUSION unwind rules
+-- ~~~~~~~~~~~~~~~~~~~
+
+{- # RULES
+"eftInt"        [~1] forall x y. eftInt x y = build (\ c n -> eftIntFB c n x y)
+"eftIntList"    [1] eftIntFB  (:) [] = eftInt
+"take"     [~1] forall n xs . take n xs =
+  build (\c nil -> if 0 < n
+                   then foldr (takeFB c nil) (flipSeqTake nil) xs n
+                   else nil)
+"unsafeTakeList"  [1] forall n xs . foldr (takeFB (:) []) (flipSeqTake []) xs n
+                                        = unsafeTake n xs
+ # -}
+
+
+mainFUa = print $ take 3 ([1..1000000] :: [Int])
+{-
+MISSING???: eftInt
+Rule fired: take (GHC.List)
+Rule fired: fold/build (GHC.Base)
+
+take 3 (eftInt 1 1000000)
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (eftInt 1 1000000) 3) 
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (build (\c n -> eftIntFB c n 1 1000000)) 3) 
+build (\c nil -> (\c n -> eftIntFB c n 1 1000000) (takeFB c nil) (flipSeqTake nil) 3)
+build (\c nil -> (eftIntFB (takeFB c nil) (flipSeqTake nil) 1 1000000) 3)
+(eftIntFB (takeFB (:) []) (flipSeqTake nil) 1 1000000) 3
+-}
+
+
+mainFUb = print $ take 3 $ tail ([1..1000000] :: [Int])  --unfuses
+{-
+
+??? MISSING "eftInt"
+Rule fired: take (GHC.List)
+Rule fired: eftIntList (GHC.Enum)
+Rule fired: unsafeTakeList (GHC.List)
+
+take 3 (tail (eftInt 1 1000000))
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (tail (eftInt 1 1000000)) n 3)                        "take"
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (tail (build (\c n -> eftIntFB c n 1 1000000))) n 3)  "eftInt"
+
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (tail (eftIntFB (:) [] 1 1000000)) n 3)
+build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (tail (eftInt 1 1000000)) n 3)                        "eftIntList"
+foldr (takeFB (:) []) (flipSeqTake nil) (tail (eftInt 1 1000000)) n 3
+unsafeTake 3 (tail (eftInt 1 1000000))                                                                        "unsafeTakeList"
+-}
+
+{-
+sum           = foldl (+) 0
+foldl k z0 xs = foldr (\v fn \z -> fn (k z v)) id xs z0
+
+isFirst f = f ^-> isLim
+isLim = Injector (\_ i -> (app1 i, False)) True
+f ^-> itL' = InjectedFnL (\a l   -> f a $# l) itL'
+mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z where acc s a = let (i, s') = gen a s in (s', f a i)
+mySnd (myMapAccumL f z xs) = build (\c nil -> foldr (mapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
+
+fnBool & isFirst
+fnBool ^-> isLim
+InjectedFnL (\a l -> fnBool a $# l) (Injector (\_ i -> (app1 i, False)) True)
+InjectedFnL (\a l -> fnBool a l) (Injector (\_ i -> (i, False)) True)
+-}
+
+mainFUc = print $ sum $ take 3 $ mapWith (fnBool & isFirst) ([1..1000000] :: [Int])
+{-
+??? MISSING "eftInt"
+Rule fired: take (GHC.List)
+Rule fired: sndMapAccumL (MapWith)
+Rule fired: fold/build (GHC.Base)
+Rule fired: fold/build (GHC.Base)
+Rule fired: fold/build (GHC.Base)
+
+sum (take 3 (mapWith (fnBool & isFirst) (eftInt 1 1000000)))
+
+foldl (+) 0 (take 3 (mapWith (fnBool & isFirst) (eftInt 1 1000000)))
+foldr (\v fn \z -> fn (z + v)) id (take 3 (mapWith (fnBool & isFirst) (eftInt 1 1000000))) 0
+foldr (\v fn \z -> fn (z + v)) id build (\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (mapWith (fnBool & isFirst) (eftInt 1 1000000)) 3) 0
+(\c nil -> foldr (takeFB c nil) (flipSeqTake nil) (mapWith (fnBool & isFirst) (eftInt 1 1000000)) 3) (\v fn \z -> fn (z + v)) id 0
+foldr (takeFB (\v fn \z -> fn (z + v)) id) (flipSeqTake nil) (mapWith (fnBool & isFirst) (eftInt 1 1000000)) 3) 0
+...
+
+mapWith (fnBool & isFirst) ([1..1000000] :: [Int])
+mapWith (fnBool & isFirst) (eftInt 1 1000000)
+snd (mapAccumL acc True (eftInt 1 1000000)) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> foldr (mapAccumLFB c acc) (flipSeqMapAccumL nil) (eftInt 1 1000000) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> foldr (mapAccumLFB c acc) (flipSeqMapAccumL nil) (build (\ c n -> eftIntFB c n x y)) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> (\ c n -> eftIntFB c n x y) (mapAccumLFB c acc) (flipSeqMapAccumL nil) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> (eftIntFB (mapAccumLFB c acc) (flipSeqMapAccumL nil) x y) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+(eftIntFB (mapAccumLFB (:) acc) (flipSeqMapAccumL []) x y) True where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+-}
+
+mainFUd = print $ mapWith (fnBool & isFirst) $ tail ([1..10] :: [Int])
+
+{-
+mapWith (fnBool & isFirst) $ tail ([1..1000000] :: [Int])
+mapWith (fnBool & isFirst) (tail (eftInt 1 1000000))
+snd (mapAccumL acc True (tail (eftInt 1 1000000))) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> foldr (mapAccumLFB c acc) (flipSeqMapAccumL nil) (tail (eftInt 1 1000000)) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+build (\c nil -> foldr (mapAccumLFB c acc) (flipSeqMapAccumL nil) (tail (build (\ c n -> eftIntFB c n x y))) True) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+foldr (mapAccumLFB (:) acc) (flipSeqMapAccumL []) (tail (build (\ c n -> eftIntFB c n x y))) True where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+foldr (mapAccumLFB (:) acc) (flipSeqMapAccumL []) (tail (eftIntFB (:) [] x y)) True where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+foldr (mapAccumLFB (:) acc) (flipSeqMapAccumL []) (tail (eftInt x y)) True where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+
+We want this...
+snd (mapAccumL acc True (tail (eftInt x y))) where acc s a = let (i, s') = (\_ i -> (i, False)) a s in (s', injfn a i)
+
+-}
+
+mainFUe = print $ tail $ mapWith (fnBool & isFirst) $ tail ([1..10] :: [Int])
+
+fnBool :: Int -> Bool -> Int
+fnBool n True  = n * 9
+fnBool n False = n * 8
+

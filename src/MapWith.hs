@@ -497,15 +497,19 @@ mySnd = snd
   build (\c nil -> foldr (mapAccumLFB c f) (flipSeqMapAccumL nil) xs z)
  #-}
  {-
+ I can't make this fire, but it doesn't seem to be a great loss.
 "sndMapAccumLList" [1]  forall f z xs. foldr (mapAccumLFB (:) f) (flipSeqMapAccumL []) xs z = 
-  mySnd (myMapAccumL f z xs)
+  sndMapAccumLList f z xs
+{-# NOINLINE [1] sndMapAccumLList #-}
+sndMapAccumLList :: (s -> a -> (s, b)) -> s -> [a] -> [b]
+sndMapAccumLList f z = snd . mapAccumL f z
   -}
 
-{-# INLINE [0] mapAccumLFB #-}  --cf {-# INLINE [0] takeFB #-}
+{-# INLINE [0] mapAccumLFB #-}
 mapAccumLFB :: (b -> r -> r) -> (s -> a -> (s, b)) -> a -> (s -> r) -> s -> r
 mapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 
-{-# INLINE [0] flipSeqMapAccumL #-} --cf {-# INLINE [0] flipSeqTake #-}
+{-# INLINE [0] flipSeqMapAccumL #-}
 flipSeqMapAccumL :: a -> s -> a
 flipSeqMapAccumL x !_s = x
 
