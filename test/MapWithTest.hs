@@ -45,6 +45,8 @@ tests =
   , mapWith (testFn0 & prevElt) "abc"  == [Nothing, Just 'a', Just 'b']
   , mapWith (testFn0 & nextElt) "abc"  == [Just 'b', Just 'c', Nothing]
   , andFirstLast "abc"                  == [('a',True,False),('b',False,False),('c',False,True)]
+  , andFirstLast "a"                    == [('a',True,True)]
+  , andFirstLast ""                     == []
   , take 3 (andFirstLast [1..])         == [(1,True,False),(2,False,False),(3,False,False)]
   , andFirstLast (FunnySet 8 9 1 2 5)   == FunnySet (8,True,False) (9,False,False) (1,False,False) (2,False,False) (5,False,True)
   , mapWith (testFn0 <-^ eltFromMay [1,2]) [1,2,3]

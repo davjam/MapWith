@@ -349,12 +349,13 @@ mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
 mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
   where acc s a = let (i, s') = gen a s in (s', f a i)
-mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) = mySnd . myMapAccumL accL zL . snd . mapAccumR accR zR
-  --have mapAccumR store values (not parial function applications), then the storage will be PINNED, not on stack.
-  --the (possibly fused) myMapAccumL can tail recurse/loop over the data, building the state/injector values as it goes.
-  --(Data/partial functions stored during recusion unwind can cause very slow behaviour on huge lists).
-  where accR s a       = let (ir, s') = genR a s in (s', (a, ir))
-        accL s (a, ir) = let (il, s') = genL a s in (s', (f a il ir))
+mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) =  snd . mapAccumR accR zR . mySnd . myMapAccumL accL zL
+  --have mapAccumL create values (not parial function applications). It can fuse with data providers
+  --the myMapAccumR can then PIN the mapAccumL results (not on stack) plus its own R-based injections.
+  --(good) consumets can tail recurse/loop over the data applying the injections as they go.
+  --(Don't store data or partial functions during recusion unwind: it can cause very slow behaviour on huge lists).
+  where accL s a       = let (il, s') = genL a s in (s', (a, il))
+        accR s (a, il) = let (ir, s') = genR a s in (s', f a il ir)
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 --
 -- Parameters (as defined in the 'InjectedFn') are passed to a map function (embedded in the 'InjectedFn'), in addition to the elements of the 'Traversable'.
@@ -397,7 +398,7 @@ class Injectable m where
   -- | Inject "from the left"
   (^->) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
-  (<-^) :: (Simpl i, CurryN i b) => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (<-^) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
 
 -- ^ An 'Injectable' is (recursively) either:
 --
@@ -419,15 +420,9 @@ instance Injectable InjectedFn where
   InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r $# l')          itL'            itR
   InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r $# l') (injPair itL itL')       itR
 
---  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
-  (<-^) :: forall a i b. (Simpl i, CurryN i b) => InjectedFn a (FnType i b) -> Injector a i -> InjectedFn a b
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> simplFnA @i (uncurryN $ f a l)   r')          itL                 (simplInj itR')
-
+  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
   InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r $# r')                 (injPair itR itR')
   InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r $# r')          itL    (injPair itR itR')
-  
-simplInj :: Simpl i => Injector a i -> Injector a (SimplType i)
-simplInj (Injector nxt z) = let nxt' = (\a s -> let (i, s') = nxt a s in (simplFnB i, s')) in Injector nxt' z
 
 -- $PrecombinedInjectors
 -- These are combinations of '^->' or '<-^' with [pre-defined injectors](#PredefinedInjectors).

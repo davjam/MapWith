@@ -7,7 +7,7 @@ import Data.Function ((&))
 import MapWith
 
 main = prevNextMapWith
-lots = [1..1000000] :: [Int]
+lots = [1..100000000] :: [Int]
 
 --Left-based maps:
 firstRec     = print $ sum $ withFirstRec  fnBool lots
@@ -146,27 +146,27 @@ withPrevNextZip f xs = zipWith3 f xs (Nothing : map Just xs) (map Just (tail xs)
 
 --injected functions
 fnBool :: Int -> Bool -> Int
-fnBool n True  = n * n
-fnBool n False = n + 5
+fnBool n True  = n * 9
+fnBool n False = n * 8
 
 fnAdj :: Int -> Maybe Int -> Int
-fnAdj n Nothing  = n * n
-fnAdj n (Just m) = n * m
+fnAdj n Nothing  =  n      * 9
+fnAdj n (Just m) = (n + m) * 8
 
 fnBoolBool :: Int -> Bool -> Bool -> Int
-fnBoolBool n True  True  = n * n
-fnBoolBool n True  False = n + 5
-fnBoolBool n False True  = n * 3
-fnBoolBool n False False = n * (n + 4)
+fnBoolBool n True  True  = n * 9
+fnBoolBool n True  False = n * 8
+fnBoolBool n False True  = n * 7
+fnBoolBool n False False = n * 6
 
 fnBoolBoolTup :: (Int, Bool, Bool) -> Int
-fnBoolBoolTup (n, True , True ) = n * n
-fnBoolBoolTup (n, True , False) = n + 5
-fnBoolBoolTup (n, False, True ) = n * 3
-fnBoolBoolTup (n, False, False) = n * (n + 4)
+fnBoolBoolTup (n, True , True ) = n * 9
+fnBoolBoolTup (n, True , False) = n * 8
+fnBoolBoolTup (n, False, True ) = n * 7
+fnBoolBoolTup (n, False, False) = n * 6
 
 fnAdjAdj :: Int -> Maybe Int -> Maybe Int -> Int
-fnAdjAdj n Nothing  Nothing  = n * n
-fnAdjAdj n (Just m) Nothing  = n * m
-fnAdjAdj n Nothing  (Just p) = n + p
-fnAdjAdj n (Just m) (Just p) = (n * m) + p
+fnAdjAdj n Nothing  Nothing  =  n          * 9
+fnAdjAdj n (Just m) Nothing  = (n + m    ) * 8
+fnAdjAdj n Nothing  (Just p) = (n     + p) * 7
+fnAdjAdj n (Just m) (Just p) = (n + m + p) * 6

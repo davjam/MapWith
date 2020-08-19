@@ -36,8 +36,6 @@ module CurryN
   
   -- * Other Implementations
   -- $SeeAlso
-  
-  , Simpl(..)
   )
 where
 
@@ -113,26 +111,6 @@ instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
 ($#) :: CurryN args r => FnType args r -> args -> r
 f $# args = (uncurryN f) args
 
-class Simpl args where        --converts a function of one arg, to a fn of one arg, but with a simpler representation of the arg.
-  type SimplType args :: *                              --SimplType (Int, ()) = Int
-  simplFnA :: (args -> r) -> (SimplType args -> r)
-  simplFnB :: args -> SimplType args
-
-instance Simpl () where
-  type SimplType () = ()
-  simplFnA f = f
-  simplFnB () = ()
-
-instance Simpl (App1 a) where
-  type SimplType (a, ()) = a
-  simplFnA f = \a -> f $ app1 a
-  simplFnB (a, ()) = a
-  
-instance Simpl (App2 a b) where  
-  type SimplType (a, (b, ())) = (a, b)
-  simplFnA f = \(a, b) -> f $ app2 a b
-  simplFnB (a, (b, ())) = (a, b)
-  
 {- $StackingFunctions
 These types and functions can make code that uses the "stacked tupples" look a little less weird. For example, you can write:
 
