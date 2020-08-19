@@ -141,15 +141,26 @@ benchmark tuning
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench benchmarks --benchmark-option="1000000 19" --ghc-options="-O2 -ddump-simpl -dsuppress-all -ddump-to-file -fno-prof-auto"
---cabal bench benchmarks --benchmark-option="1000000 19" --ghc-options="-O2 -ddump-rule-firings -fno-prof-auto"
 --cabal bench benchmarks --benchmark-option="1000000 19" --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P"
 --cabal bench benchmarks --benchmark-option="1000000 19" --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd -xt"
 --hp2ps -e8in -c benchmarks.hp
 benchmark benchmarks
-  main-is:             Benchmarks.hs
+  main-is:             BechmarksPerf.hs
   Other-modules:       MapWith
                        CurryN
+                       Benchmarks
+  hs-source-dirs:      src perf
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+
+--cabal bench BenchmarksSimpl --ghc-options="-O2 -ddump-simpl -dsuppress-all -ddump-to-file -fno-prof-auto"
+--cabal bench BenchmarksSimpl --ghc-options="-O2 -ddump-rule-firings -fno-prof-auto"
+benchmark BenchmarksSimpl
+  main-is:             BechmarksSimpl.hs
+  Other-modules:       MapWith
+                       CurryN
+                       Benchmarks
   hs-source-dirs:      src perf
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010

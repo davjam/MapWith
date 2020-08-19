@@ -1,7 +1,6 @@
-module Main (main)
+module Benchmarks (testFn)
 where
 
-import System.Environment
 import Data.Function ((&))
 import MapWith
 
@@ -11,11 +10,7 @@ E.g. adding SCC tags, or sharing the list between test fns
 can give incorrect benchmarks.
 -}
 
-main = do
-  args <- getArgs --e.g. ["1000000 7"]
-  let [n, testFnId] = map read $ words $ head args
-  print $ sum $ testFn testFnId n
-
+{-# INLINE testFn #-}
 testFn :: Int -> Int -> [Int]
 --left-based maps:
 testFn  1 n = withFirstRec     fnBool                     [1..n]
