@@ -1,45 +1,53 @@
---NOT IN GIT, to make cross-version comparison easier.
-
 module Main (main)
 where
 
+import System.Environment
 import Data.Function ((&))
 import MapWith
 
-main = prevNextMapWith
-lots = [1..100000000] :: [Int]
+{-
+BEWARE: this is very sensitive to changes.
+E.g. adding SCC tags, or sharing the list between test fns
+can give incorrect benchmarks.
+-}
 
---Left-based maps:
-firstRec     = print $ sum $ withFirstRec  fnBool lots
-firstScan    = print $ sum $ withFirstScan fnBool lots
-firstMap     = print $ sum $ withFirstMap  fnBool lots
-firstMapWith = print $ sum $ mapWith (fnBool & isFirst) lots
+main = do
+  args <- getArgs --e.g. ["1000000 7"]
+  let [n, testFnId] = map read $ words $ head args
+  print $ sum $ testFn testFnId n
 
-prevRec      = print $ sum $ withPrevRec   fnAdj  lots
-prevScan     = print $ sum $ withPrevScan  fnAdj  lots
-prevZip      = print $ sum $ withPrevZip   fnAdj  lots
-prevMapWith  = print $ sum $ mapWith (fnAdj ^-> adjElt) lots
+testFn :: Int -> Int -> [Int]
+--left-based maps:
+testFn  1 n = withFirstRec     fnBool                     [1..n]
+testFn  2 n = withFirstScan    fnBool                     [1..n]
+testFn  3 n = withFirstMap     fnBool                     [1..n]
+testFn  4 n = mapWith         (fnBool & isFirst)          [1..n]
+
+testFn  5 n = withPrevRec      fnAdj                      [1..n]
+testFn  6 n = withPrevScan     fnAdj                      [1..n]
+testFn  7 n = withPrevZip      fnAdj                      [1..n]
+testFn  8 n = mapWith         (fnAdj ^-> adjElt)          [1..n]
 
 --Right-based maps:
-lastRec      = print $ sum $ withLastRec   fnBool lots
-lastScan     = print $ sum $ withLastScan  fnBool lots
-lastMap      = print $ sum $ withLastMap   fnBool lots
-lastMapWith  = print $ sum $ mapWith (fnBool & isLast) lots
+testFn  9 n = withLastRec      fnBool                     [1..n]
+testFn 10 n = withLastScan     fnBool                     [1..n]
+testFn 11 n = withLastMap      fnBool                     [1..n]
+testFn 12 n = mapWith         (fnBool & isLast)           [1..n]
 
-nextRec      = print $ sum $ withNextRec   fnAdj  lots
-nextScan     = print $ sum $ withNextScan  fnAdj  lots
-nextZip      = print $ sum $ withNextZip   fnAdj  lots
-nextMapWith  = print $ sum $ mapWith (fnAdj <-^ adjElt) lots
+testFn 13 n = withNextRec      fnAdj                      [1..n]
+testFn 14 n = withNextScan     fnAdj                      [1..n]
+testFn 15 n = withNextZip      fnAdj                      [1..n]
+testFn 16 n = mapWith         (fnAdj <-^ adjElt)          [1..n]
 
 --Left and Right:
-firstLastRec     = print $ sum $ withFirstLastRec fnBoolBool lots
-firstLastMap     = print $ sum $ withFirstLastMap fnBoolBool lots
-firstLastMapWith = print $ sum $ withFirstLast    fnBoolBool lots
-firstLastMB      = print $ sum $ map fnBoolBoolTup $ markbounds lots
+testFn 17 n = withFirstLastRec fnBoolBool                 [1..n]
+testFn 18 n = withFirstLastMap fnBoolBool                 [1..n]
+testFn 19 n = withFirstLast    fnBoolBool                 [1..n]
+testFn 20 n = map              fnBoolBoolTup $ markbounds [1..n]
 
-prevNextRec      = print $ sum $ withPrevNextRec fnAdjAdj  lots
-prevNextZip      = print $ sum $ withPrevNextZip fnAdjAdj  lots
-prevNextMapWith  = print $ sum $ withPrevNext    fnAdjAdj  lots
+testFn 21 n = withPrevNextRec  fnAdjAdj                   [1..n]
+testFn 22 n = withPrevNextZip  fnAdjAdj                   [1..n]
+testFn 23 n = withPrevNext     fnAdjAdj                   [1..n]
 
 --Hand crafted alternatives to mapWith
 
