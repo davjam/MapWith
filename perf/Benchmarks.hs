@@ -3,6 +3,7 @@ where
 
 import Data.Function ((&))
 import MapWith
+import Data.List.NonEmpty (NonEmpty(..))
 
 {-
 BEWARE: this is very sensitive to changes.
@@ -46,7 +47,27 @@ testFn 23 n = withPrevNext     fnAdjAdj                   [1..n]
 
 --Foldl injector:
 testFn 30 n = mapWith ((+) ^-> foldlElts (+) 0)           [1..n]
-testFn 31 n = mapWith ((+) <-^ foldlElts (+) 0)           [1..n]
+testFn 31 n = mapWith ((+) <-^ foldlElts (+) 0)           [1..n]    --performance not great. data not PINNED.
+testFn 32 n = let xs = [1..n] in zipWith (+) xs (scanr (+) 0 xs)    --but neither is this.
+
+--eltIx injector:
+testFn 33 n = mapWith ((+) ^-> eltIx)                     [1..n]
+testFn 34 n = mapWith ((+) <-^ eltIx)                     [1..n]
+
+--adj2Elts injector:
+testFn 35 n = mapWith (fnAdjAdj ^-> adj2Elts)             [1..n]
+testFn 36 n = mapWith (fnAdjAdj <-^ adj2Elts)             [1..n]
+
+--eltFrom/etc
+testFn 37 n = mapWith ((+) ^-> eltFrom [3,5..(n*3)])      [1..n]
+testFn 38 n = mapWith ((+) <-^ eltFrom [3,5..(n*3)])      [1..n]
+testFn 39 n = mapWith ((+) ^-> eltFromDef 7 [3,12,2,9])   [1..n]
+testFn 40 n = mapWith ((+) <-^ eltFromDef 7 [3,12,2,9])   [1..n]
+testFn 41 n = mapWith ((+) ^-> eltFromCycle (3:|[12,2,9]))[1..n]
+testFn 42 n = mapWith ((+) <-^ eltFromCycle (3:|[12,2,9]))[1..n]
+testFn 43 n = mapWith (fnAdj ^-> eltFromMay [3,12,2,9])   [1..n]
+testFn 44 n = mapWith (fnAdj <-^ eltFromMay [3,12,2,9])   [1..n]
+
 
 --Some more fusion tests:
 testFn 100 n = take n $ mapWith (fnBool & isFirst) $ repeat (100 :: Int)
