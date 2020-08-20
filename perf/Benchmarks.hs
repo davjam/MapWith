@@ -200,8 +200,18 @@ fnBoolBoolTup (n, True , False) = n * 8
 fnBoolBoolTup (n, False, True ) = n * 7
 fnBoolBoolTup (n, False, False) = n * 6
 
+{-# INLINE fnAdjAdj #-} --INLINE makes test 35 fast. (But doesn't impact test 36).
 fnAdjAdj :: Int -> Maybe Int -> Maybe Int -> Int
 fnAdjAdj n Nothing  Nothing  =  n          * 9
 fnAdjAdj n (Just m) Nothing  = (n + m    ) * 8
 fnAdjAdj n Nothing  (Just p) = (n     + p) * 7
 fnAdjAdj n (Just m) (Just p) = (n + m + p) * 6
+
+{-
+This has the same effect on test 35 as marking INLINE.
+fnAdjAdj n mMay pMay =
+  case pMay of Nothing  -> case mMay of Nothing  ->  n          * 9
+                                        (Just m) -> (n + m    ) * 8
+               (Just p) -> case mMay of Nothing  -> (n     + p) * 7
+                                        (Just m) -> (n + m + p) * 6
+-}
