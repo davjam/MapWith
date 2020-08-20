@@ -44,6 +44,10 @@ testFn 21 n = withPrevNextRec  fnAdjAdj                   [1..n]
 testFn 22 n = withPrevNextZip  fnAdjAdj                   [1..n]
 testFn 23 n = withPrevNext     fnAdjAdj                   [1..n]
 
+--Foldl injector:
+testFn 30 n = mapWith ((+) ^-> foldlElts (+) 0)           [1..n]
+testFn 31 n = mapWith ((+) <-^ foldlElts (+) 0)           [1..n]
+
 --Some more fusion tests:
 testFn 100 n = take n $ mapWith (fnBool & isFirst) $ repeat (100 :: Int)
 testFn 101 n = take n $ withFirstLast fnBoolBool   $ repeat (100 :: Int)
