@@ -222,9 +222,9 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
 
 {-# INLINABLE eltFromCycle #-}
 eltFromCycle :: NonEmpty i -> Injector a (App1 i)
-eltFromCycle l = Injector (\_ s -> case s of i :| []   -> (app1 i, l)
-                                             i :| y:yx -> (app1 i, y :| yx))
-                          l
+eltFromCycle (e1 :| ex) = Injector (\_ ss -> case ss of []     -> (app1 e1, ex)
+                                                        (s:sx) -> (app1 s , sx))
+                                   []
 -- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
 --
 -- >>> let f a b = [a,b] in mapWith (f ^-> eltFromCycle (fromList "123")) "sally"
