@@ -58,10 +58,15 @@ module MapWith
 
   -- * Custom Injectors
   , Injector(..)
+  
+  -- ** Stacked-Tuple Helpers
+  -- $StackedTupleHelpers
+  , module CurryTFExps  --these are very helpful for building Injectors. Someone can import CurryTF if they want more.
   )
 where
 
 import CurryTF
+import qualified CurryTF as CurryTFExps (App1, App2, App3, App4, app1, app2, app3, app4)
 
 import Data.Foldable (fold)
 import Data.Traversable (mapAccumL, mapAccumR)
@@ -134,6 +139,9 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  +-------+---------------+------+-----------------+---------------+
 --
 --  More usefully, this might allow for e.g. injection of random values, etc.
+
+-- $StackedTupleHelpers
+-- These make it easier to define 'Injector' types and injection values.
 
 {-# INLINE injPair #-}
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)

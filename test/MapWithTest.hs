@@ -35,6 +35,9 @@ fbb = ["foo", "bar", "baz"]
 data FunnySet a = FunnySet a a a a a
   deriving (Eq, Show, Functor, Foldable, Traversable)
 
+sillyInj :: Injector Int (App1 Int) --testing we've exported enough to make building Injectors easy.
+sillyInj = Injector (\a s -> (s+2, app1 (a+s))) 3
+
 tests :: [Bool]
 tests =
   [
@@ -59,6 +62,7 @@ tests =
   , mapWith (testFn0 <-^ foldl1Elts (-)   ) [9, 1, 8] == [-2,  7, 8]
   , mapWith (testFn0 ^-> foldlElts  (-) 20) [9, 1, 8] == [11, 10, 2] 
   , mapWith ((,,,) ^-> adj2Elts & isLast) "fred" ==[('f',Nothing,Nothing,False),('r',Just 'f',Nothing,False),('e',Just 'r',Just 'f',False),('d',Just 'e',Just 'r',True)]
+  , mapWith (testFn0 ^-> sillyInj) [4, 5, 6] == [7,10,13]
 --, length (scoreWeek [1,2..168]) == 168  --hangs in GHC 8.4.3 (per https://gitlab.haskell.org/ghc/ghc/-/issues/16943)
   , length (mapWeek [1,2..168]) == 168    --I don't think we have quite the same situation, and I think I've tested lots of infinite list cases already, but trying to be safe.
   ]
