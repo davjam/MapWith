@@ -165,9 +165,9 @@ isLim = Injector (\_ i -> (False, app1 i)) True
 --
 -- else inject False.
 --
--- >>> let f = (\a b -> [a, ch b]); ch isLim = if isLim then '*' else ' ' in mapWith (f ^-> isLim) "12345"
+-- >>> let f a b = [a, ch b]; ch isLim = if isLim then '*' else ' ' in mapWith (f ^-> isLim) "12345"
 -- ["1*","2 ","3 ","4 ","5 "]
--- >>> let f = (\a b -> [a, ch b]); ch isLim = if isLim then '*' else ' ' in mapWith (f <-^ isLim) "12345"
+-- >>> let f a b = [a, ch b]; ch isLim = if isLim then '*' else ' ' in mapWith (f <-^ isLim) "12345"
 -- ["1 ","2 ","3 ","4 ","5*"]
 
 {-# INLINABLE eltIx #-}
@@ -178,9 +178,9 @@ eltIx = Injector (\_ i -> (i+1, app1 i)) 0
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 --
--- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f ^-> eltIx) "freddy"
+-- >>> let f a b = [a, head $ show b] in mapWith (f ^-> eltIx) "freddy"
 -- ["f0","r1","e2","d3","d4","y5"]
--- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f <-^ eltIx) "freddy"
+-- >>> let f a b = [a, head $ show b] in mapWith (f <-^ eltIx) "freddy"
 -- ["f5","r4","e3","d2","d1","y0"]
 
 evenElt :: Injector a (App1 Bool)
