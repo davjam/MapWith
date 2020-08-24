@@ -281,8 +281,8 @@ fn4 :: Int -> Maybe Int -> Int
 fn4 x (Just y) = x + y
 fn4 x Nothing = x * 2
 
-mainP = print $ sum $ mapWith (fn1Arg & isEven) [1..1000000]
---perfect with Injector-based isEven.
+mainP = print $ sum $ mapWith (fn1Arg ^-> evenElt) [1..1000000]
+--perfect with Injector-based evenElt.
 
 {- Wow! It does two numbers with each loop!
 main_$s$wgo

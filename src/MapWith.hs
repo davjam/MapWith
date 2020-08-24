@@ -42,6 +42,7 @@ module MapWith
   , adjElt
   , adj2Elts
   , eltIx
+  , evenElt
   , foldlElts
   , foldl1Elts
   , eltFrom
@@ -54,7 +55,6 @@ module MapWith
   , isLast
   , prevElt
   , nextElt
-  , isEven
 
   -- * Custom Injectors
   , Injector(..)
@@ -174,6 +174,15 @@ eltIx = Injector (\_ i -> (i+1, app1 i)) 0
 -- ["f0","r1","e2","d3","d4","y5"]
 -- >>> let f = (\a b -> [a, head $ show b]) in mapWith (f <-^ eltIx) "freddy"
 -- ["f5","r4","e3","d2","d1","y0"]
+
+evenElt :: Injector a (App1 Bool)
+evenElt = Injector (\_ s -> (not s, app1 s)) True
+-- ^ True if an even-numbered (0th, 2nd, 4th, etc) item, counting from the left or from the right.
+--
+-- >>> let f c e = [c, if e then '*' else ' '] in mapWith (f ^-> evenElt) "123456"
+-- ["1*","2 ","3*","4 ","5*","6 "]
+-- >>> let f c e = [c, if e then '*' else ' '] in mapWith (f <-^ evenElt) "123456"
+-- ["1 ","2*","3 ","4*","5 ","6*"]
 
 {-# INLINABLE eltFrom #-}
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
@@ -432,10 +441,6 @@ prevElt f = f ^-> adjElt
 nextElt :: Injectable f => f a (Maybe a -> b) -> InjectedFn a b
 nextElt f = f <-^ adjElt
 -- ^ 'adjElt', from the right.
-
-isEven :: Injectable f => f a (Bool -> b) -> InjectedFn a b
-isEven f = f ^-> Injector (\_ s -> (not s, app1 s)) True
--- ^ True if an even-numbered (0th, 2nd, 4th, etc) item.
 
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
