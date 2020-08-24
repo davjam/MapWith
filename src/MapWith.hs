@@ -61,7 +61,7 @@ module MapWith
   )
 where
 
-import CurryN
+import CurryTF
 
 import Data.Foldable (fold)
 import Data.Traversable (mapAccumL, mapAccumR)
@@ -93,12 +93,12 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  - the new state, and
 --  - the injection value(s)
 --
---  The injection value(s) must be an @args@ (per 'CurryN'), in order for the injector to work with the  '^->' and '<-^' operators.
+--  The injection value(s) must be an @args@ (per 'CurryTF'), in order for the injector to work with the  '^->' and '<-^' operators.
 --  These can be created by:
 --
 --  - using 'app1', 'app2', etc; or
 --  - by nesting the values appropriately e.g @(i1, ())@ or @(i1, (i2, (i3, (i4, (i5, .. () ..)))))@
---  - defining a new instance of 'CurryN'
+--  - defining a new instance of 'CurryTF'
 --
 --  The first value(s) to inject is/are determined by a first call to the generate function.
 --  The first call to the generate function is with the first (if combined with '^->') or last (if combined with '<-^') item from the 'Traversable' and the initial state.
@@ -389,9 +389,9 @@ data InjectedFn a b
 
 class Injectable m where
   -- | Inject "from the left"
-  (^->) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (^->) :: CurryTF i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
   -- | Inject "from the right"
-  (<-^) :: CurryN i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
+  (<-^) :: CurryTF i b => m a (FnType i b) -> Injector a i -> InjectedFn a b
 
 -- ^ An 'Injectable' is (recursively) either:
 --

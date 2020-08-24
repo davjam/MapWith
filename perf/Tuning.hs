@@ -8,7 +8,7 @@ module Main (main) where
 import Data.Traversable (mapAccumL)
 import Data.Function ((&))
 import MapWith
-import CurryN
+import CurryTF
 
 main = mainP
 
@@ -89,7 +89,7 @@ baseline:
 Blimey.
 -}
 
-{- The above is all without the CurryN stuff. With it (amazingly) we still inline. Checking performance:
+{- The above is all without the CurryTF stuff. With it (amazingly) we still inline. Checking performance:
 perf ind-end:
 	total time  =        0.31 secs   (311 ticks @ 1000 us, 1 processor)
 	total alloc = 392,046,128 bytes  (excludes profiling overheads)

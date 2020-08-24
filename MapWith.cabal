@@ -28,7 +28,7 @@ source-repository head
 
 library
   exposed-modules:     MapWith
-                       CurryN
+                       CurryTF
   hs-source-dirs:      src
   ghc-options:         -Wall
   other-extensions:    ExistentialQuantification
@@ -38,15 +38,15 @@ library
 Test-Suite test-MapWith
   main-is:             MapWithTest.hs
   Other-modules:       MapWith
-                       CurryN
+                       CurryTF
   type:                exitcode-stdio-1.0
   hs-source-dirs:      src test
   default-language:    Haskell2010
   build-depends:       base
 
-Test-Suite test-CurryN
-  main-is:             CurryNTest.hs
-  Other-modules:       CurryN
+Test-Suite test-CurryTF
+  main-is:             CurryTFTest.hs
+  Other-modules:       CurryTF
   type:                exitcode-stdio-1.0
   hs-source-dirs:      src test
   default-language:    Haskell2010
@@ -64,7 +64,7 @@ Test-Suite test-CurryN
 benchmark tuning
   main-is:             Tuning.hs
   Other-modules:       MapWith
-                       CurryN
+                       CurryTF
   hs-source-dirs:      src perf
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
@@ -76,7 +76,7 @@ benchmark tuning
 benchmark benchmarks
   main-is:             BechmarksPerf.hs
   Other-modules:       MapWith
-                       CurryN
+                       CurryTF
                        Benchmarks
   hs-source-dirs:      src perf
   type:                exitcode-stdio-1.0
@@ -88,7 +88,7 @@ benchmark benchmarks
 benchmark BenchmarksSimpl
   main-is:             BechmarksSimpl.hs
   Other-modules:       MapWith
-                       CurryN
+                       CurryTF
                        Benchmarks
   hs-source-dirs:      src perf
   type:                exitcode-stdio-1.0

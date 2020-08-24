@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 {- |
-Module      : CurryN
+Module      : CurryTF
 Description : Provides curry/uncurry-like function for any number of parameters
 Copyright   : (c) David James, 2020
 License     : BSD3
@@ -12,18 +12,21 @@ Stability   : Experimental
 
 A generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
 
+
 For the class instances provided here, the arguments are packaged into a "stacked tuple".
 For example @(\'x\', (3 :: Int, (True, ())))@ represents a set of three arguments of different types:
 
 - @\'x\' :: Char@;
 - @3 :: Int@; and
 - @True :: Bool@.
+
+The TF stands for Type Family. I've given this the (possibly weird) name to avoid any conflict with similar implementations.
 -}
 
-module CurryN
+module CurryTF
   (
   -- * Class
-    CurryN(..)
+    CurryTF(..)
   , ($#)
 
   -- * Stacking Helpers
@@ -31,7 +34,7 @@ module CurryN
   , App1, App2, App3, App4
   , app1, app2, app3, app4
   
-  -- * Custom CurryN Implementations
+  -- * Custom CurryTF Implementations
   -- $CustomArgApp
   
   -- * Other Implementations
@@ -45,7 +48,7 @@ Given:
 - a type 'args' containing n embedded arguments; and 
 - a result type 'r'
 
-@CurryN args r@ represents the ability to convert either way between functions:
+@CurryTF args r@ represents the ability to convert either way between functions:
 
 - @fCurried :: /each/ -> /argument/ -> /as/ -> /a/ -> /separate/ -> /parameter/ -> r@; and
 - @fUncurried :: /all-arguments-embedded-in-a-single-parameter/ -> r@.
@@ -56,7 +59,7 @@ so that:
 - @fUncurried = uncurryN fCurried@.
 -}
 
-class CurryN args r where
+class CurryTF args r where
   {- |
     The type of the (curried) function that can have arguments of the types embedded in 'args' applied and that returns a result of type 'r'.
     For example:
@@ -96,19 +99,19 @@ class CurryN args r where
   uncurryN :: FnType args r -> args -> r
 
 -- | the application of zero arguments, giving @r@
-instance CurryN () r where
+instance CurryTF () r where
   type FnType () r = r
   curryN f = f ()
   uncurryN f () = f
 
 -- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
-instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
+instance CurryTF moreArgs r => CurryTF (arg, moreArgs) r where
   type FnType (arg, moreArgs) r = arg -> FnType moreArgs r
   curryN f a = curryN (\t -> f (a, t))
   uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
 
 -- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
-($#) :: CurryN args r => FnType args r -> args -> r
+($#) :: CurryTF args r => FnType args r -> args -> r
 f $# args = uncurryN f args
 
 {- $StackingFunctions
@@ -156,7 +159,7 @@ It is possible to define instances for other types, for example:
 @
 data MyStuff = MyStuff Char Int Bool
 
-instance CurryN MyStuff r where
+instance CurryTF MyStuff r where
   type FnType MyStuff r = Char -> Int -> Bool -> r
   curryN f c n b = f (MyStuff c n b)
   uncurryN f (MyStuff c n b) = f c n b

@@ -5,7 +5,7 @@ where
 
 import System.Exit
 
-import CurryN
+import CurryTF
 
 main | and tests = exitSuccess
      | otherwise = exitFailure
