@@ -10,7 +10,7 @@ import Data.Function ((&))
 import MapWith
 import CurryN
 
-main = mainX
+main = mainP
 
 mainA = print $ sum $ mapWith (fn2 <-^ eltIx) $ take 100 primes
 
