@@ -47,7 +47,6 @@ module MapWith
   , eltFrom
   , eltFromMay
   , eltFromDef
-  , eltFromCycle
 
   -- ** Pre-Combined Injectors
   -- $PrecombinedInjectors
@@ -65,7 +64,6 @@ where
 import CurryN
 
 import Data.Foldable (fold)
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Traversable (mapAccumL, mapAccumR)
 import Data.Function ((&))
 import Control.Exception (assert)
@@ -219,18 +217,6 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
 -- ["sb","ae","ln","lX","yX"]
 -- >>> let f a b = [a,b] in mapWith (f <-^ eltFromDef 'X' "ben") "sally"
 -- ["sX","aX","ln","le","yb"]
-
-{-# INLINABLE eltFromCycle #-}
-eltFromCycle :: NonEmpty i -> Injector a (App1 i)
-eltFromCycle (e1 :| ex) = Injector (\_ ss -> case ss of []     -> (app1 e1, ex)
-                                                        (s:sx) -> (app1 s , sx))
-                                   []
--- ^ like `eltFrom`, but cycles back to the start after they've been exhausted.
---
--- >>> let f a b = [a,b] in mapWith (f ^-> eltFromCycle (fromList "123")) "sally"
--- ["s1","a2","l3","l1","y2"]
--- >>> let f a b = [a,b] in mapWith (f <-^ eltFromCycle (fromList "123")) "sally"
--- ["s2","a1","l3","l2","y1"]
 
 {-# INLINABLE adjElt #-}
 adjElt :: Injector a (App1 (Maybe a))

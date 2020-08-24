@@ -53,10 +53,6 @@ tests =
                                         == [Nothing, Just 2, Just 1]
   , mapWith (testFn0 <-^ eltFromDef 7 [1,2]) [1,2,3]
                                         == [7, 2, 1]
-  , mapWith (testFn0 ^-> eltFromCycle (fromList "abc")) [1,2,3,4,5]
-                                        == "abcab"
-  , mapWith (testFn0 ^-> eltFromCycle (fromList "a")) [1,2,3,4,5]
-                                        == "aaaaa"
   , mapWith (testFn0 & isEven) "abcdef" == [True,False,True,False,True,False]
   , mapWith (testFn0 ^-> foldl1Elts (-)   ) [9, 1, 8] == [ 9,  8, 0]
   , mapWith (testFn0 <-^ foldl1Elts (-)   ) [9, 1, 8] == [-2,  7, 8]
