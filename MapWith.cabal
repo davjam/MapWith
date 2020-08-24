@@ -70,8 +70,8 @@ benchmark tuning
   default-language:    Haskell2010
   build-depends:       base
 
---cabal bench benchmarks --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -p -RTS" --benchmark-option="1000000 19" 
---cabal bench benchmarks --ghc-options="-O2 -fno-prof-auto" --benchmark-options="+RTS -P -hd -xt -RTS" --benchmark-option="1000000 19" 
+--cabal bench benchmarks --ghc-options="-O2 -funfolding-use-threshold=150 -fno-prof-auto" --benchmark-options="+RTS -p -RTS" --benchmark-option="100000000 19"
+--cabal bench benchmarks --ghc-options="-O2 -funfolding-use-threshold=150 -fno-prof-auto" --benchmark-options="+RTS -P -hd -xt -RTS" --benchmark-option="1000000 19" 
 --hp2ps -e8in -c benchmarks.hp
 benchmark benchmarks
   main-is:             BechmarksPerf.hs
