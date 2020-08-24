@@ -28,7 +28,7 @@ fn2 w x | w > 10 = fn2 (w - 6) (x - 15)
         | otherwise = w + x
 
 constInjB :: Injector a (App1 Int)
-constInjB = Injector (\_ _ -> (app1 61, ())) ()
+constInjB = Injector (\_ _ -> ((), app1 61)) ()
 
 {-
 Depends on INLINABLE in MapWith:
@@ -43,7 +43,7 @@ no          yes        case $wfn 102# 61# of ww_s93b
 mainB' = print $ sum $ mapWith (fn3 ^-> constInjB ^-> constInjB') $ take 100 primes
 
 constInjB' :: Injector a (App1 Int)
-constInjB' = Injector (\_ _ -> (app1 65, ())) ()
+constInjB' = Injector (\_ _ -> ((), app1 65)) ()
 
 fn3 :: Int -> Int -> Int -> Int
 fn3 w x y | w > 10 = fn3 (w - 6) (x - 15) (y + 2)
@@ -120,14 +120,14 @@ Now with INLINABLE in eltIx etc:
 mainC = print $ sum $ injFwd constInjC fn2 $ take 100 primes
 
 constInjC :: Injector a Int
-constInjC = Injector (\_ _ -> (62, ())) ()
+constInjC = Injector (\_ _ -> ((), 62)) ()
 
 --core has: main5 = case $wfn 101# 61# of ww_s6fD { __DEFAULT -> I# ww_s6fD }
 
 injFwd :: Traversable t => Injector a i -> (a -> i -> b) -> t a -> t b
 injFwd (Injector nxt z) f = snd . mapAccumL acc z
   where
-  acc s a = let (i, s') = nxt a s in (s', f a i)
+  acc s a = let (s', i) = nxt a s in (s', f a i)
 
 --And with a non-const list:
 
@@ -138,14 +138,14 @@ primes = filterPrime [2..]
 mainD = print $ sum $ injFwd constInjD fn2 $ take 100 primes
 
 constInjD :: Injector a Int
-constInjD = Injector (\_ _ -> (63, ())) ()
+constInjD = Injector (\_ _ -> ((), 63)) ()
 
 --Still yes: case $wfn_r736 ww2_s6VS 63# of ww3_s6W0 (A bit weird: the 63 is in there four times).
 
 mainE = print $ sum $ myMapWith (fn2 ^*> constInjE) $ take 100 primes
 
 constInjE :: Injector a Int
-constInjE = Injector (\_ _ -> (64, ())) ()
+constInjE = Injector (\_ _ -> ((), 64)) ()
 
 data MyInjectedFn a b
   = forall l r. MyInjectedFnLR (a -> l -> r -> b) (Injector a l) (Injector a r)
@@ -153,7 +153,7 @@ data MyInjectedFn a b
   | forall   r. MyInjectedFnR  (a      -> r -> b)                (Injector a r)
 
 myMapWith (MyInjectedFnL  f (Injector gen z)) = snd . mapAccumL acc z
-  where acc s a = let (i, s') = gen a s in (s', f a i)
+  where acc s a = let (s', i) = gen a s in (s', f a i)
 
 (^*>) :: (a -> i -> b) -> Injector a i -> MyInjectedFn a b
 f ^*> itL' = MyInjectedFnL (\a l   -> f a l) itL'
@@ -164,10 +164,10 @@ f ^*> itL' = MyInjectedFnL (\a l   -> f a l) itL'
 mainF = print $ sum $ myMapWith (fn3 ^*> constInjF ^**> constInjF') $ take 100 primes
 
 constInjF :: Injector a Int
-constInjF = Injector (\_ _ -> (66, ())) ()
+constInjF = Injector (\_ _ -> ((), 66)) ()
 
 constInjF' :: Injector a Int
-constInjF' = Injector (\_ _ -> (67, ())) ()
+constInjF' = Injector (\_ _ -> ((), 67)) ()
 
 
 MyInjectedFnL  f itL     ^**> itL' = MyInjectedFnL  (\a (l, l')   -> f a l   l') (injPair itL itL')
@@ -186,7 +186,7 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 mainG = print $ sum $ myMapWith (fn2 ^+> myEltIx) $ take 100 primes
 
 myEltIx :: Integral i => Injector a (i, ())
-myEltIx = Injector (\_ i -> ((i, ()), i+1)) 0
+myEltIx = Injector (\_ i -> (i+1, (i, ()))) 0
 
 (^+>) :: MyCurryN i b => (a -> MyFnType i b) -> Injector a i -> MyInjectedFn a b
 f ^+> itL' = MyInjectedFnL (\a l   -> f a $## l) itL'
