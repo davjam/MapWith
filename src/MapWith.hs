@@ -404,18 +404,20 @@ class Injectable m where
 infixl 1 ^->
 infixl 1 <-^
 
+--In the below, iL = existing left Injector; nL = new left Injector. l = existing left-injected value; nl = new left-injected value.
+
 instance Injectable (->) where
-  f ^-> itL' = InjectedFnL (\a l   -> f a $# l) itL'
-  f <-^ itR' = InjectedFnR (\a   r -> f a $# r)        itR'
+  f                    ^-> nL = InjectedFnL  (\a     nl         -> f a     $# nl)             nL
+  f                    <-^ nR = InjectedFnR  (\a            nr  -> f a     $# nr)                         nR
 
 instance Injectable InjectedFn where
-  InjectedFnL  f itL     ^-> itL' = InjectedFnL  (\a (l, l')   -> f a l   $# l') (injPair itL itL')
-  InjectedFnR  f     itR ^-> itL' = InjectedFnLR (\a     l'  r -> f a   r $# l')          itL'            itR
-  InjectedFnLR f itL itR ^-> itL' = InjectedFnLR (\a (l, l') r -> f a l r $# l') (injPair itL itL')       itR
+  InjectedFnL  f iL    ^-> nL = InjectedFnL  (\a (l, nl)        -> f a l   $# nl) (injPair iL nL)
+  InjectedFnR  f    iR ^-> nL = InjectedFnLR (\a     nl  r      -> f a   r $# nl)             nL       iR
+  InjectedFnLR f iL iR ^-> nL = InjectedFnLR (\a (l, nl) r      -> f a l r $# nl) (injPair iL nL)      iR
 
-  InjectedFnL  f itL     <-^ itR' = InjectedFnLR (\a l     r'  -> f a l   $# r')          itL                 itR'
-  InjectedFnR  f     itR <-^ itR' = InjectedFnR  (\a   (r, r') -> f a   r $# r')                 (injPair itR itR')
-  InjectedFnLR f itL itR <-^ itR' = InjectedFnLR (\a l (r, r') -> f a l r $# r')          itL    (injPair itR itR')
+  InjectedFnL  f iL    <-^ nR = InjectedFnLR (\a  l         nr  -> f a l   $# nr)          iL             nR
+  InjectedFnR  f    iR <-^ nR = InjectedFnR  (\a        (r, nr) -> f a   r $# nr)             (injPair iR nR)
+  InjectedFnLR f iL iR <-^ nR = InjectedFnLR (\a  l     (r, nr) -> f a l r $# nr)          iL (injPair iR nR)
 
 -- $PrecombinedInjectors
 -- These are combinations of '^->' or '<-^' with [pre-defined injectors](#PredefinedInjectors).
