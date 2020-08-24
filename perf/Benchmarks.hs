@@ -1,9 +1,10 @@
-module Benchmarks (testFn)
+module Benchmarks (testFn, myCycle)
 where
 
 import Data.Function ((&))
 import MapWith
 import Data.List.NonEmpty (NonEmpty(..))
+import GHC.Base (build)
 
 {-
 BEWARE: this is very sensitive to changes.
@@ -67,14 +68,34 @@ testFn 41 n = mapWith ((+) ^-> eltFromCycle (3:|[12,2,9]))[1..n]
 testFn 42 n = mapWith ((+) <-^ eltFromCycle (3:|[12,2,9]))[1..n]
 testFn 43 n = mapWith (fnAdj ^-> eltFromMay [3,12,2,9])   [1..n]
 testFn 44 n = mapWith (fnAdj <-^ eltFromMay [3,12,2,9])   [1..n]
-
+testFn 45 n = mapWith ((+) ^-> eltFrom (cycle [3,12,2,9]))[1..n]
+testFn 46 n = mapWith ((+) <-^ eltFrom (cycle [3,12,2,9]))[1..n]
+testFn 47 n = mapWith ((+) ^-> eltFrom (myCycle [3,12,2,9]))[1..n]
+testFn 48 n = mapWith ((+) <-^ eltFrom (myCycle [3,12,2,9]))[1..n]
 
 --Some more fusion tests:
-testFn 100 n = take n $ mapWith (fnBool & isFirst) $ repeat (100 :: Int)
-testFn 101 n = take n $ withFirstLast fnBoolBool   $ repeat (100 :: Int)
-testFn 102 n = take n $ withFirstLast fnBoolBool   $ cycle  ([10,15,19,2] :: [Int])
-testFn 103 n = take n $ map fnBoolBoolTup $ markbounds $ repeat (100 :: Int)
-testFn 104 n = take n $ map fnBoolBoolTup $ markbounds $ cycle  ([10,15,19,2] :: [Int])
+testFn 100 n = take n $ mapWith (fnBool & isFirst)     $ repeat  (100 :: Int)
+testFn 107 n = take n $ mapWith (fnBool & isLast)      $ repeat  (100 :: Int)
+testFn 101 n = take n $ withFirstLast fnBoolBool       $ repeat  (100 :: Int)
+testFn 108 n = take n $ mapWith (fnBool & isFirst)     $ cycle   ([10,15,19,2] :: [Int])
+testFn 109 n = take n $ mapWith (fnBool & isLast)      $ cycle   ([10,15,19,2] :: [Int])
+testFn 102 n = take n $ withFirstLast fnBoolBool       $ cycle   ([10,15,19,2] :: [Int])
+testFn 110 n = take n $ mapWith (fnBool & isFirst)     $ myCycle ([10,15,19,2] :: [Int])
+testFn 111 n = take n $ mapWith (fnBool & isLast)      $ myCycle ([10,15,19,2] :: [Int])
+testFn 105 n = take n $ withFirstLast fnBoolBool       $ myCycle ([10,15,19,2] :: [Int])
+
+testFn 103 n = take n $ map fnBoolBoolTup $ markbounds $ repeat  (100 :: Int)
+testFn 104 n = take n $ map fnBoolBoolTup $ markbounds $ cycle   ([10,15,19,2] :: [Int])
+testFn 106 n = take n $ map fnBoolBoolTup $ markbounds $ myCycle ([10,15,19,2] :: [Int])
+
+
+
+myCycle :: [a] -> [a]
+myCycle xs = xs' where xs' = xs ++ xs'
+{-# NOINLINE [1] myCycle #-}
+
+{-# RULES "myCycle/build" [~1] forall (f::forall b.(a->b->b) -> b -> b). myCycle (build f) = build (\c _n -> let z = f c z in z)
+    #-}
 
 --Hand crafted alternatives to mapWith
 
