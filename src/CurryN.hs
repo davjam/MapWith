@@ -103,13 +103,13 @@ instance CurryN () r where
 
 -- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
 instance CurryN moreArgs r => CurryN (arg, moreArgs) r where
-  type FnType (arg, moreArgs) r = arg -> (FnType moreArgs r)
+  type FnType (arg, moreArgs) r = arg -> FnType moreArgs r
   curryN f a = curryN (\t -> f (a, t))
   uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
 
 -- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
 ($#) :: CurryN args r => FnType args r -> args -> r
-f $# args = (uncurryN f) args
+f $# args = uncurryN f args
 
 {- $StackingFunctions
 These types and functions can make code that uses the "stacked tupples" look a little less weird. For example, you can write:
