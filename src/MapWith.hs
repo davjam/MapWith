@@ -79,7 +79,7 @@ import GHC.Base (build)
 -- [@s@]: the internal state in an 'Injector'
 
 --XXXX I'd like to add separate comments for each parameter, but that's not supported to GHC 8.6 https://github.com/haskell/haddock/issues/836#issuecomment-391402361
-data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parameter is a generate function, the second parameter is the initial state.
+data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parameter is a generate function, the second parameter is the initial state.
 
 -- ^ Injectors have an initial state and a generate function.
 --
@@ -90,8 +90,8 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parame
 --
 --  to determine both:
 --
---  - the injection value(s), and
---  - the new state.
+--  - the new state, and
+--  - the injection value(s)
 --
 --  The injection value(s) must be an @args@ (per 'CurryN'), in order for the injector to work with the  '^->' and '<-^' operators.
 --  These can be created by:
@@ -105,33 +105,33 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parame
 --
 --  For example:
 --
---  >>> funnyNext a s = (app1 $ a + s, a + 1)
+--  >>> funnyNext a s = (a + 1, app1 $ a + s)
 --  >>> funnyInjector = Injector funnyNext 17
 --  >>> mapWith ((\_ i -> i) ^-> funnyInjector) [4,8,3]
 --  [21,13,12]
 --
---  +-------+---------------+------+---------------+-----------------+
---  + Call  + Initial State + Item + Injection     + New State       +
---  +=======+===============+======+===============+=================+
---  + 1     + 17            + 4    + 17+4=__21__   + 4+1=5           +
---  +-------+---------------+------+---------------+-----------------+
---  + 2     + 5             + 8    + 5+8=__13__    + 8+1=9           +
---  +-------+---------------+------+---------------+-----------------+
---  + 3     + 9             + 3    + 9+3=__12__    + 3+1=4 (ignored) |
---  +-------+---------------+------+---------------+-----------------+
+--  +-------+---------------+------+-----------------+---------------+
+--  + Call  + Initial State + Item + New State       + Injection     +
+--  +=======+===============+======+=================+===============+
+--  + 1     + 17            + 4    + 4+1=5           + 17+4=__21__   +
+--  +-------+---------------+------+-----------------+---------------+
+--  + 2     + 5             + 8    + 8+1=9           + 5+8=__13__    +
+--  +-------+---------------+------+-----------------+---------------+
+--  + 3     + 9             + 3    + 3+1=4 (ignored) | 9+3=__12__    +
+--  +-------+---------------+------+-----------------+---------------+
 --
 --  >>> mapWith ((\_ i -> i) <-^ funnyInjector) [4,8,3]
 --  [13,12,20]
 --
---  +-------+---------------+------+---------------+-----------------+
---  + Call  + Initial State + Item + Injection     + New State       +
---  +=======+===============+======+===============+=================+
---  + 1     + 17            + 3    + 17+3=__20__   + 3+1=4           +
---  +-------+---------------+------+---------------+-----------------+
---  + 2     + 4             + 8    + 4+8=__12__    + 8+1=9           +
---  +-------+---------------+------+---------------+-----------------+
---  + 3     + 9             + 4    + 9+4=__13__    + 4+1=5 (ignored) |
---  +-------+---------------+------+---------------+-----------------+
+--  +-------+---------------+------+-----------------+---------------+
+--  + Call  + Initial State + Item + New State       + Injection     +
+--  +=======+===============+======+=================+===============+
+--  + 1     + 17            + 3    + 3+1=4           + 17+3=__20__   +
+--  +-------+---------------+------+-----------------+---------------+
+--  + 2     + 4             + 8    + 8+1=9           + 4+8=__12__    +
+--  +-------+---------------+------+-----------------+---------------+
+--  + 3     + 9             + 4    + 4+1=5 (ignored) | 9+4=__13__    +
+--  +-------+---------------+------+-----------------+---------------+
 --
 --  More usefully, this might allow for e.g. injection of random values, etc.
 
@@ -139,9 +139,9 @@ data Injector a i = forall s. Injector (a -> s -> (i, s)) s -- ^the first parame
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
 injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
   where
-  nxt a ~(s1, s2) = let (i1, s1') = n1 a s1       -- !! NOTE THE ~ !! It allows "constant" injectors (e.g. isLim), and hence e.g. andFirstLast to work on infinite lists.
-                        (i2, s2') = n2 a s2
-                    in ((i1, i2), (s1', s2'))
+  nxt a ~(s1, s2) = let (s1', i1) = n1 a s1       -- !! NOTE THE ~ !! It allows "constant" injectors (e.g. isLim), and hence e.g. andFirstLast to work on infinite lists.
+                        (s2', i2) = n2 a s2
+                    in ((s1', s2'), (i1, i2))
 
 -- $PredefinedInjectors
 -- 
@@ -149,7 +149,7 @@ injPair (Injector n1 z1) (Injector n2 z2) = Injector nxt (z1, z2)
 
 {-# INLINABLE isLim #-}
 isLim :: Injector a (App1 Bool)
-isLim = Injector (\_ i -> (app1 i, False)) True
+isLim = Injector (\_ i -> (False, app1 i)) True
 -- ^ inject 'True' if the item is at the limit:
 --
 -- - from the left: if it's the first item
@@ -164,7 +164,7 @@ isLim = Injector (\_ i -> (app1 i, False)) True
 
 {-# INLINABLE eltIx #-}
 eltIx :: Integral i => Injector a (App1 i)
-eltIx = Injector (\_ i -> (app1 i, i+1)) 0
+eltIx = Injector (\_ i -> (i+1, app1 i)) 0
 -- ^ inject the item index:
 --
 -- - from the left: the first item is 0, the second 1, etc.
@@ -178,7 +178,7 @@ eltIx = Injector (\_ i -> (app1 i, i+1)) 0
 {-# INLINABLE eltFrom #-}
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
         -> Injector a (App1 i)
-eltFrom l = Injector (\_ s -> assert (not $ null s) (app1 $ head s, tail s)) l
+eltFrom l = Injector (\_ s -> assert (not $ null s) (tail s, app1 $ head s)) l
 -- ^ Inject each given element in turn:
 --
 -- - from the left: the first element will be injected for the first item in the 'Traversable'.
@@ -196,8 +196,8 @@ eltFrom l = Injector (\_ s -> assert (not $ null s) (app1 $ head s, tail s)) l
 
 {-# INLINABLE eltFromMay #-}
 eltFromMay :: [i] -> Injector a (App1 (Maybe i))
-eltFromMay l = Injector (\_ s -> case s of []   -> (app1 Nothing , [])
-                                           i:ix -> (app1 $ Just i, ix))
+eltFromMay l = Injector (\_ s -> case s of []   -> ([], app1 Nothing)
+                                           i:ix -> (ix, app1 $ Just i))
                          l
 -- ^ a safe version of `eltFrom`. Injects 'Just' each given element in turn, or 'Nothing' after they've been exhausted.
 --
@@ -208,8 +208,8 @@ eltFromMay l = Injector (\_ s -> case s of []   -> (app1 Nothing , [])
 
 {-# INLINABLE eltFromDef #-}
 eltFromDef :: i -> [i] -> Injector a (App1 i)
-eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
-                                               i:ix -> (app1 i  , ix))
+eltFromDef def l = Injector (\_ s -> case s of []   -> ([], app1 def)
+                                               i:ix -> (ix, app1 i))
                             l
 -- ^ a safe version of `eltFrom`. Injects each given element in turn, or the default after they've been exhausted.
 --
@@ -220,7 +220,7 @@ eltFromDef def l = Injector (\_ s -> case s of []   -> (app1 def, [])
 
 {-# INLINABLE adjElt #-}
 adjElt :: Injector a (App1 (Maybe a))
-adjElt = Injector (\a prevMay -> (app1 prevMay, Just a)) Nothing
+adjElt = Injector (\a prevMay -> (Just a, app1 prevMay)) Nothing
 -- ^ inject 'Just' the adjacent item:
 --
 -- - from the left: the previous item, except for the first item
@@ -235,7 +235,7 @@ adjElt = Injector (\a prevMay -> (app1 prevMay, Just a)) Nothing
 
 {-# INLINABLE adj2Elts #-}
 adj2Elts :: Injector a (App2 (Maybe a) (Maybe a))
-adj2Elts = Injector (\a (prev1May, prev2May) -> (app2 prev1May prev2May, (Just a, prev1May))) (Nothing, Nothing)
+adj2Elts = Injector (\a (prev1May, prev2May) -> ((Just a, prev1May), app2 prev1May prev2May)) (Nothing, Nothing)
 -- ^ like 'adjElt', but injects the two adjacent items into separate parameters.
 --
 -- >>> let f a b c = [a,ch b,ch c]; ch = maybe '-' id in mapWith (f ^-> adj2Elts) "12345"
@@ -247,7 +247,7 @@ adj2Elts = Injector (\a (prev1May, prev2May) -> (app2 prev1May prev2May, (Just a
 foldlElts :: (i -> a -> i)
           -> i
           -> Injector a (App1 i)
-foldlElts f z = Injector (\a s -> let s' = f s a in (app1 s', s')) z
+foldlElts f z = Injector (\a s -> let s' = f s a in (s', app1 s')) z
 -- ^ Inject a (left-associative) fold of the items:
 --
 -- +------+---------------------------------------------------------------------------------------------+
@@ -272,7 +272,7 @@ foldlElts f z = Injector (\a s -> let s' = f s a in (app1 s', s')) z
 {-# INLINABLE foldl1Elts #-}
 foldl1Elts :: (a -> a -> a)
            -> Injector a (App1 a)
-foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (app1 s', Just s')) Nothing
+foldl1Elts f = Injector (\a s -> let s' = maybe a (flip f a) s in (Just s', app1 s')) Nothing
 -- ^ A variant of 'foldlElts' that has no starting value:
 --
 -- +------+----------------------------------------------------------------------+
@@ -330,16 +330,16 @@ mapWith :: Traversable t
         -> t a
         -> t b
 mapWith (InjectedFnL  f (Injector gen z)) = mySnd . myMapAccumL acc z
-  where acc s a = let (i, s') = gen a s in (s', f a i)
+  where acc s a = let (s', i) = gen a s in (s', f a i)
 mapWith (InjectedFnR  f (Injector gen z)) = snd . mapAccumR acc z
-  where acc s a = let (i, s') = gen a s in (s', f a i)
+  where acc s a = let (s', i) = gen a s in (s', f a i)
 mapWith (InjectedFnLR f (Injector genL zL) (Injector genR zR)) =  snd . mapAccumR accR zR . mySnd . myMapAccumL accL zL
   --have mapAccumL create values (not parial function applications). It can fuse with data providers
   --the myMapAccumR can then PIN the mapAccumL results (not on stack) plus its own R-based injections.
   --(good) consumets can tail recurse/loop over the data applying the injections as they go.
   --(Don't store data or partial functions during recusion unwind: it can cause very slow behaviour on huge lists).
-  where accL s a       = let (il, s') = genL a s in (s', (a, il))
-        accR s (a, il) = let (ir, s') = genR a s in (s', f a il ir)
+  where accL s a       = let (s', il) = genL a s in (s', (a, il))
+        accR s (a, il) = let (s', ir) = genR a s in (s', f a il ir)
 -- ^ maps an 'InjectedFn' over a 'Traversable' type @t@, turning a @t a@ into a @t b@ and preserving the structure of @t@.
 --
 -- Parameters (as defined in the 'InjectedFn') are passed to a map function (embedded in the 'InjectedFn'), in addition to the elements of the 'Traversable'.
@@ -434,7 +434,7 @@ nextElt f = f <-^ adjElt
 -- ^ 'adjElt', from the right.
 
 isEven :: Injectable f => f a (Bool -> b) -> InjectedFn a b
-isEven f = f ^-> Injector (\_ s -> (app1 s, not s)) True
+isEven f = f ^-> Injector (\_ s -> (not s, app1 s)) True
 -- ^ True if an even-numbered (0th, 2nd, 4th, etc) item.
 
 -- $PrePackagedMaps
