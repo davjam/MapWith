@@ -14,6 +14,8 @@
 -- * whether the first / last item
 -- * the previous / next item
 -- * the index from the start / end
+--
+-- It offers excellent [performance](#Performance).
 
 module MapWith
   (
@@ -62,6 +64,15 @@ module MapWith
   -- ** Stacked-Tuple Helpers
   -- $StackedTupleHelpers
   , module CurryTFExps  --these are very helpful for building Injectors. Someone can import CurryTF if they want more.
+  
+  -- * Performance
+  -- $Performance
+  
+  -- ** Benchmarks
+  -- $Benchmarks
+  
+  -- ** Fusion
+  -- $Fusion
   )
 where
 
@@ -101,7 +112,7 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  The injection value(s) must be an @args@ (per 'CurryTF'), in order for the injector to work with the  '^->' and '<-^' operators.
 --  These can be created by:
 --
---  - using 'app1', 'app2', etc; or
+--  - (recommended) using 'app1', 'app2', etc; or
 --  - by nesting the values appropriately e.g @(i1, ())@ or @(i1, (i2, (i3, (i4, (i5, .. () ..)))))@
 --  - defining a new instance of 'CurryTF'
 --
@@ -142,6 +153,9 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 
 -- $StackedTupleHelpers
 -- These make it easier to define 'Injector' types and injection values.
+--
+-- You are advised to use these since I'm considering re-working CurryTF so that it's not based on tuples.
+-- If I do, I intend to maintain compatibility of app1/App1, etc.
 
 {-# INLINE injPair #-}
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)
@@ -514,3 +528,52 @@ mapAccumLFB c f x xs = \s -> let (s', b) = f s x in b `c` xs s'
 flipSeqMapAccumL :: a -> s -> a
 flipSeqMapAccumL x !_s = x
 
+{- $Performance
+I think the performance is now (since 0.2.0.0) excellent. In particular:
+
+- `mapWith` "traverses" in each direction at most once, and only goes in both directions if it needs to;
+- many functions are inlinable and "compile away"; and
+- mapWith is capable of fusion (see details below).
+
+If you have any examples where you think performance is poor, or suggestions for improvements, please let me know.
+-}
+
+{- $Benchmarks
+I've compared the performance of `mapWith` vs [markbounds](https://stackoverflow.com/questions/14114011/haskell-map-operation-with-different-first-and-last-functions#answer-53282575)
+and a number of other attempts to "hand craft" equivalent functionality.
+The results are in [Benchmarks.ods](https://github.com/davjam/MapWith/blob/master/doc/Becnhmarks.ods).
+The [Benchmarks.hs](https://github.com/davjam/MapWith/blob/master/perf/Benchmarks.hs) file contains the details of these tests.
+-}
+
+{- $Fusion
+`mapWith` & friends are capable of [list fusion](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html#list-fusion).
+When the `Traversable` is a List, `mapWith` is always a "good consumer". When the only injections are "from the left", it is also a "good producer".
+
+As a result, code like:
+
+>>> let f n b = if b then n*2 else n*3 in sum $ mapWith (f ^-> evenElt) [1..1000000]
+
+will compile to a loop with no generation of list elements and no call stack usage.
+
+When a "from the right" injection occurs, `mapWith` is not a "good producer", and an intermediate list will be created.
+However, with a "state free" `Injector` (`isLim` or `adjElt`), the list elements will only exist temporarily, the call stack will not grow
+(see [here](https://stackoverflow.com/questions/63504127/haskell-pinned-or-stack-memory-for-performance)),
+and there is no limit to the number of elements in the processed list.
+
+With other Injectors "from the right", the call stack will grow as elements are processed, giving a limit to the size of the list.
+Despite this, I think the performance remains very good, and better than many alternative approaches.
+
+In summary, when `mapWith` sits between a "good producer" and a "good consumer", there are three broad categories of behaviour:
+
+ +-----------------------------------------+--------------+------------+
+ | Injections                              | Speed        | Size limit |
+ +=========================================+==============+============+
+ | only "from the left"                    | exceptional  | No         | 
+ +-----------------------------------------+--------------+------------+
+ | "from the right", but only "state free" | very good    | No         |
+ +-----------------------------------------+--------------+------------+
+ | any                                     | good         | Yes        |
+ +-----------------------------------------+--------------+------------+
+ 
+Note that `eltFrom` (and similar) are not a "good consumers".
+-}

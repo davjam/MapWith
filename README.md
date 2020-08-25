@@ -37,18 +37,16 @@ Some things I wonder:
 - Doesn't this already exist? (It feels like it should!)
 - Is this useful enough to be a separate library?
 - Should I name it `Data.Traversable.MapWith`? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
-- Is `build-depends: base >= 4.11.1 && < 4.15` reasonable? I also use GHC 8.4.3. Is that "too old"?
-- Is the code/documentation clear enough?
-- Should I export the `InjectedFn` constructor? (I don't think it would be possible to create new instances anyway.)
 - Should I make up loads more Injectors, or leave that for anyone who uses the library?
 
-# Performance
+# Future Work
 
-I've tried to make it perform well, including ensuring it "traverses" in each direction at most once, and only goes in both directions if it needs to.
+Areas for potential improvement in later releases:
 
-Compared to the "benchmarks" I set myself, I think it's "OK". I'd like it to be better, but think I'd need help.
-I've read about / tried things like fusing & unboxed tuples, but haven't yet found a way to employ them that improves performance.
-There are some things I (naïvely) would have expected the optimising compiler to do, but it doesn't seem to.
+- Performance investigations and hopefully improvements, in particular:
+  - fusion for eltFrom Injectors (unlikely, given the reasons it's not possible for zipWith, but we'll see).
+  - enhancements for "stateful" "from the right" Injectors (unlikely, given [this](https://stackoverflow.com/questions/63504127/haskell-pinned-or-stack-memory-for-performance)).
 
-I myself only use it on relatively small structures, and it's more than good enough for these. I'd be grateful for any suggestions.
+- CurryTF: avoid tuples? (The tuple `(7, ())` is interpreted by `CurryTF` as an application of a single value `7`, but by `Data.Tuple.Curry` as two values: `7` and `()`,
+  which I think is slightly more confusing than it needs to be.)
 
