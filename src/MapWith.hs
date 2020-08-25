@@ -568,7 +568,7 @@ If you have any examples where you think performance is poor, or suggestions for
 {- $Benchmarks
 I've compared the performance of `mapWith` vs [markbounds](https://stackoverflow.com/questions/14114011/haskell-map-operation-with-different-first-and-last-functions#answer-53282575)
 and a number of other attempts to "hand craft" equivalent functionality.
-The results are in [Benchmarks.ods](https://github.com/davjam/MapWith/blob/master/doc/Becnhmarks.ods).
+The results are in [Benchmarks.ods](https://github.com/davjam/MapWith/blob/master/doc/Benchmarks.ods).
 The [Benchmarks.hs](https://github.com/davjam/MapWith/blob/master/perf/Benchmarks.hs) file contains the details of these tests.
 -}
 
