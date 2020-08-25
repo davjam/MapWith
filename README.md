@@ -9,21 +9,32 @@ I often want to map over a list, but do something slightly different with the fi
 For a long time I used [markbounds](https://stackoverflow.com/questions/14114011/haskell-map-operation-with-different-first-and-last-functions#answer-53282575),
 but also wanted something that:
 
-- works on structures other than lists (`mapWith` works on all `Traversable` types)
-- can provide additional types of attributes (not just first/last), such as:
-  - index from start/end
-  - the previous/next element
-- makes it easy to create new types of attribute to provide.
-- can provide any number of attributes as separate parameters to a function (not just a 3-tuple).
+- works on structures other than lists (`mapWith` works on all `Traversable` types);
+- can provide additional types of parameter (not just first/last), such as:
+  - index from start/end;
+  - the previous/next element; and
+- makes it easy to create new types of parameter to provide; and
+- can provide any number of separate parameters to a function (not just a 3-tuple).
 
-so, after only 2 years, I built a small library to do all of these.
+So, after only 2 years, I built a small library to do all of these.
 
 # Examples
 
-A trivial example:
+Passing a "standard combination" of isFirst and isLast parameters:
+
 ```
-mapWith ((,) <-^ isLim) "abc"
-[('a',False),('b',False),('c',True)]
+let g x f l = [star f, x, star l]; star b = if b then '*' else ' '
+in withFirstLast g "fred"
+["*f ", " r ", " e ", " d*"]
+```
+
+Passing a custom combination of different types of parameter 
+(the index from the start, whether it's the last element, and elements from another list applied from the right):
+
+```
+let g x n l e = concat [[x], show n, if l then "*" else "-", e]
+in mapWith (g ^-> eltIx & isLast <-^ eltFrom ["x","yy","z","zzzz","y"]) "fred"
+["f0-zzzz","r1-z","e2-yy","d3*x"]
 ```
 
 More examples are [here](doc/examples.hs).
@@ -35,9 +46,7 @@ Note that this is my first library and my first use of cabal, so I've probably d
 Some things I wonder:
 
 - Doesn't this already exist? (It feels like it should!)
-- Is this useful enough to be a separate library?
 - Should I name it `Data.Traversable.MapWith`? Or are such names "reserved" for "official" libraries, or something? Would this name impact my own file/directory structures?
-- Should I make up loads more Injectors, or leave that for anyone who uses the library?
 
 # Future Work
 
