@@ -24,7 +24,9 @@ module MapWith
 
   -- * Pre-Packaged Maps
   -- $PrePackagedMaps
-    withFirstLast
+    withFirst
+  , withLast
+  , withFirstLast
   , andFirstLast
   , withPrevNext
   , andPrevNext
@@ -95,9 +97,11 @@ import GHC.Base (build)
 -- [@s@]: the internal state in an 'Injector'
 
 --XXXX I'd like to add separate comments for each parameter, but that's not supported to GHC 8.6 https://github.com/haskell/haddock/issues/836#issuecomment-391402361
-data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parameter is a generate function, the second parameter is the initial state.
+data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parameter is a generate function, the second parameter is the initial/prior state.
 
--- ^ Injectors have an initial state and a generate function.
+-- ^ An @Injector a i@ can be used with 'mapWith' to map over a 'Traversable' containing elements of type @a@, injecting values according to the type @i@ as it goes.
+-- 
+--  Injectors have an initial state and a generate function.
 --
 --  For each item in the 'Traversable', the generate function can use both:
 --
@@ -112,8 +116,8 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  The injection value(s) must be an @args@ (per 'CurryTF'), in order for the injector to work with the  '^->' and '<-^' operators.
 --  These can be created by:
 --
---  - (recommended) using 'app1', 'app2', etc; or
---  - by nesting the values appropriately e.g @(i1, ())@ or @(i1, (i2, (i3, (i4, (i5, .. () ..)))))@
+--  - (recommended) using 'app1', 'app2', etc;
+--  - by nesting the values appropriately e.g @(i1, ())@ or @(i1, (i2, (i3, (i4, (i5, .. () ..)))))@; or
 --  - defining a new instance of 'CurryTF'
 --
 --  The first value(s) to inject is/are determined by a first call to the generate function.
@@ -152,7 +156,14 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  More usefully, this might allow for e.g. injection of random values, etc.
 
 -- $StackedTupleHelpers
--- These make it easier to define 'Injector' types and injection values.
+-- These make it easier to define 'Injector' types and injection values. For example:
+--
+-- >>> myInj = Injector (\_ _ -> ((), app3 7 False 'z')) () :: Injector a (App3 Int Bool Char)
+--
+-- defines an 'Injector', that can map over a 'Traversable' containing any type, and inject three additional constant parameters: @7::Int@, @False::Bool@ and @\'z\'::Char@. Then:
+--
+-- >>> mapWith ((,,,) ^-> myInj) ["foo", "bar", "baz"]
+-- [("foo",7,False,'z'),("bar",7,False,'z'),("baz",7,False,'z')]
 --
 -- You are advised to use these since I'm considering re-working CurryTF so that it's not based on tuples.
 -- If I do, I intend to maintain compatibility of app1/App1, etc.
@@ -179,9 +190,9 @@ isLim = Injector (\_ i -> (False, app1 i)) True
 --
 -- else inject False.
 --
--- >>> let f a b = [a, ch b]; ch isLim = if isLim then '*' else ' ' in mapWith (f ^-> isLim) "12345"
+-- >>> let f a l = [a, if l then '*' else ' '] in mapWith (f ^-> isLim) "12345"
 -- ["1*","2 ","3 ","4 ","5 "]
--- >>> let f a b = [a, ch b]; ch isLim = if isLim then '*' else ' ' in mapWith (f <-^ isLim) "12345"
+-- >>> let f a l = [a, if l then '*' else ' '] in mapWith (f <-^ isLim) "12345"
 -- ["1 ","2 ","3 ","4 ","5*"]
 
 {-# INLINABLE eltIx #-}
@@ -192,19 +203,19 @@ eltIx = Injector (\_ i -> (i+1, app1 i)) 0
 -- - from the left: the first item is 0, the second 1, etc.
 -- - from the right: the last item is 0, the penultimate 1, etc.
 --
--- >>> let f a b = [a, head $ show b] in mapWith (f ^-> eltIx) "freddy"
+-- >>> let f a b = a : show b in mapWith (f ^-> eltIx) "freddy"
 -- ["f0","r1","e2","d3","d4","y5"]
--- >>> let f a b = [a, head $ show b] in mapWith (f <-^ eltIx) "freddy"
+-- >>> let f a b = a : show b in mapWith (f <-^ eltIx) "freddy"
 -- ["f5","r4","e3","d2","d1","y0"]
 
 evenElt :: Injector a (App1 Bool)
 evenElt = Injector (\_ s -> (not s, app1 s)) True
 -- ^ True if an even-numbered (0th, 2nd, 4th, etc) item, counting from the left or from the right.
 --
--- >>> let f c e = [c, if e then '*' else ' '] in mapWith (f ^-> evenElt) "123456"
--- ["1*","2 ","3*","4 ","5*","6 "]
--- >>> let f c e = [c, if e then '*' else ' '] in mapWith (f <-^ evenElt) "123456"
--- ["1 ","2*","3 ","4*","5 ","6*"]
+-- >>> let f a e = [a, if e then '*' else ' '] in mapWith (f ^-> evenElt) "012345"
+-- ["0*","1 ","2*","3 ","4*","5 "]
+-- >>> let f a e = [a, if e then '*' else ' '] in mapWith (f <-^ evenElt) "543210"
+-- ["5 ","4*","3 ","2*","1 ","0*"]
 
 {-# INLINABLE eltFrom #-}
 eltFrom :: [i]          -- ^ The elements to inject. There must be enough elements.
@@ -259,9 +270,9 @@ adjElt = Injector (\a prevMay -> (Just a, app1 prevMay)) Nothing
 --
 -- inject 'Nothing' if there is no adjacent item (i.e. for the first / last).
 --
--- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f ^-> adjElt) "12345"
+-- >>> let f a b = [a,maybe '-' id b] in mapWith (f ^-> adjElt) "12345"
 -- ["1-","21","32","43","54"]
--- >>> let f a b = [a,ch b]; ch = maybe '-' id in mapWith (f <-^ adjElt) "12345"
+-- >>> let f a b = [a,maybe '-' id b] in mapWith (f <-^ adjElt) "12345"
 -- ["12","23","34","45","5-"]
 
 {-# INLINABLE adj2Elts #-}
@@ -469,13 +480,29 @@ nextElt f = f <-^ adjElt
 -- $PrePackagedMaps
 -- Some pre-defined maps with commonly used injectors.
 
+{-# INLINABLE withFirst #-}
+withFirst :: Traversable t => (a -> Bool -> b) -> t a -> t b
+withFirst f = mapWith $ f & isFirst
+-- ^ Maps over a 'Traversable', with an additional parameter indicating whether an item is the first.
+--
+-- >>> let g x f = [if f then '*' else ' ', x] in withFirst g "fred"
+-- ["*f", " r", " e", " d"]
+
+{-# INLINABLE withLast #-}
+withLast :: Traversable t => (a -> Bool -> b) -> t a -> t b
+withLast f = mapWith $ f & isLast
+-- ^ Maps over a 'Traversable', with an additional parameter indicating whether an item is the last.
+--
+-- >>> let g x l = [x, if l then '*' else ' '] in withLast g "fred"
+-- ["f ","r ","e ","d*"]
+
 {-# INLINABLE withFirstLast #-}
 withFirstLast :: Traversable t => (a -> Bool -> Bool -> b) -> t a -> t b
 withFirstLast f = mapWith $ f & isFirst & isLast
--- ^ Maps over a 'Traversable', with additional parameters indicating whether an item is the first or last (or both) in the list.
+-- ^ Maps over a 'Traversable', with additional parameters indicating whether an item is the first or last (or both).
 --
--- >>> let f x isFirst isLast = star isFirst ++ x ++ star isLast; star b = if b then "*" else "" in withFirstLast f ["foo", "bar", "baz"]
--- ["*foo", "bar", "baz*"]
+-- >>> let g x f l = [star f, x, star l]; star b = if b then '*' else ' ' in withFirstLast g "fred"
+-- ["*f ", " r ", " e ", " d*"]
 
 {-# INLINABLE andFirstLast #-}
 andFirstLast :: Traversable t => t a -> t (a, Bool, Bool)
@@ -556,11 +583,11 @@ As a result, code like:
 will compile to a loop with no generation of list elements and no call stack usage.
 
 When a "from the right" injection occurs, `mapWith` is not a "good producer", and an intermediate list will be created.
-However, with a "state free" `Injector` (`isLim` or `adjElt`), the list elements will only exist temporarily, the call stack will not grow
+However, with a "state free" `Injector` (such as `isLim` or `adjElt`), the list elements will only exist temporarily, the call stack will not grow
 (see [here](https://stackoverflow.com/questions/63504127/haskell-pinned-or-stack-memory-for-performance)),
 and there is no limit to the number of elements in the processed list.
 
-With other Injectors "from the right", the call stack will grow as elements are processed, giving a limit to the size of the list.
+With other "from the right" Injectors, the call stack will grow as elements are processed, giving a limit to the size of the list.
 Despite this, I think the performance remains very good, and better than many alternative approaches.
 
 In summary, when `mapWith` sits between a "good producer" and a "good consumer", there are three broad categories of behaviour:
