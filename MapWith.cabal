@@ -1,5 +1,5 @@
 name:                MapWith
-version:             0.1.0.0
+version:             0.2.0.0
 
 synopsis:            mapWith: like fmap, but with additional parameters (isFirst, isLast, etc).
 category:            Combinators
