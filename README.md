@@ -37,7 +37,7 @@ in mapWith (g ^-> eltIx & isLast <-^ eltFrom ["x","yy","z","zzzz","y"]) "fred"
 ["f0-zzzz","r1-z","e2-yy","d3*x"]
 ```
 
-More examples are [here](doc/examples.hs).
+More examples are [here](https://github.com/davjam/MapWith/blob/master/doc/examples.hs).
 
 # Questions/Doubts
 
