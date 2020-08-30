@@ -72,21 +72,24 @@ testFn 47 n = mapWith ((+) ^-> eltFrom (myCycle [3,12,2,9]))[1..n]
 testFn 48 n = mapWith ((+) <-^ eltFrom (myCycle [3,12,2,9]))[1..n]
 
 --Some more fusion tests:
-testFn 100 n = take n $ mapWith (fnBool & isFirst)     $ repeat  (100 :: Int)
-testFn 107 n = take n $ mapWith (fnBool & isLast)      $ repeat  (100 :: Int)
+testFn 100 n = take n $ withFirst     fnBool           $ repeat  (100 :: Int)
+testFn 107 n = take n $ withLast      fnBool           $ repeat  (12 :: Int)
 testFn 101 n = take n $ withFirstLast fnBoolBool       $ repeat  (100 :: Int)
-testFn 108 n = take n $ mapWith (fnBool & isFirst)     $ cycle   ([10,15,19,2] :: [Int])
-testFn 109 n = take n $ mapWith (fnBool & isLast)      $ cycle   ([10,15,19,2] :: [Int])
+testFn 108 n = take n $ withFirst     fnBool           $ cycle   ([10,15,19,2] :: [Int])
+testFn 109 n = take n $ withLast      fnBool           $ cycle   ([10,15,19,2] :: [Int])
 testFn 102 n = take n $ withFirstLast fnBoolBool       $ cycle   ([10,15,19,2] :: [Int])
-testFn 110 n = take n $ mapWith (fnBool & isFirst)     $ myCycle ([10,15,19,2] :: [Int])
-testFn 111 n = take n $ mapWith (fnBool & isLast)      $ myCycle ([10,15,19,2] :: [Int])
+testFn 110 n = take n $ withFirst     fnBool           $ myCycle ([10,15,19,2] :: [Int])
+testFn 111 n = take n $ withLast      fnBool           $ myCycle ([10,15,19,2] :: [Int])
 testFn 105 n = take n $ withFirstLast fnBoolBool       $ myCycle ([10,15,19,2] :: [Int])
 
 testFn 103 n = take n $ map fnBoolBoolTup $ markbounds $ repeat  (100 :: Int)
 testFn 104 n = take n $ map fnBoolBoolTup $ markbounds $ cycle   ([10,15,19,2] :: [Int])
 testFn 106 n = take n $ map fnBoolBoolTup $ markbounds $ myCycle ([10,15,19,2] :: [Int])
 
-
+testFn 112 n = take n $ withFirst     fnBool           $ iterate (+1) 1
+testFn 113 n = take n $ withLast      fnBool           $ iterate (+1) 1
+testFn 114 n = take n $ withFirstLast fnBoolBool       $ iterate (+1) 1
+testFn 115 n = take n $ map fnBoolBoolTup $ markbounds $ iterate (+1) 1
 
 myCycle :: [a] -> [a]
 myCycle xs = xs' where xs' = xs ++ xs'
