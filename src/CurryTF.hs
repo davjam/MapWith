@@ -1,4 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,24 +14,30 @@ Copyright   : (c) David James, 2020
 License     : BSD3
 Stability   : Experimental
 
-A generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
+This module includes:
 
+- A class 'CurryTF': a generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
+- 'HList': a basic implementation of hetrogenous lists that are an instance of CurryTF
+- Some utility functions
 
 For the class instances provided here, the arguments are packaged into a "stacked tuple".
-For example @(\'x\', (3 :: Int, (True, ())))@ represents a set of three arguments of different types:
+For example @\'x\' :# True :# EQ :# HNil@ represents a set of three arguments of different types:
 
 - @\'x\' :: Char@;
-- @3 :: Int@; and
-- @True :: Bool@.
+- @True :: Bool@; and
+- @EQ :: Ordering@.
 
 The TF stands for Type Family. I've given this the (possibly weird) name to avoid any conflict with similar implementations.
 -}
 
 module CurryTF
   (
-  -- * Class
+  -- * CurryTF
     CurryTF(..)
   , ($#)
+  
+  -- * HList
+  , HList(..)
 
   -- * Stacking Helpers
   -- $StackingFunctions
@@ -41,6 +51,18 @@ module CurryTF
   -- $SeeAlso
   )
 where
+
+data HList xs where
+    HNil :: HList '[]
+    (:#) :: a -> HList as -> HList (a ': as)
+
+infixr 6 :#
+
+instance Show (HList '[]) where
+  show HNil = "HNil"
+
+instance (Show a, Show (HList xs)) => Show (HList (a ': xs)) where
+  show (a :# xs) = show a ++ " :# " ++ show xs
 
 {- |
 Given:
@@ -99,16 +121,16 @@ class CurryTF args r where
   uncurryN :: FnType args r -> args -> r
 
 -- | the application of zero arguments, giving @r@
-instance CurryTF () r where
-  type FnType () r = r
-  curryN f = f ()
-  uncurryN f () = f
+instance CurryTF (HList '[]) r where
+  type FnType (HList '[]) r = r
+  curryN f = f HNil
+  uncurryN f HNil = f
 
 -- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
-instance CurryTF moreArgs r => CurryTF (arg, moreArgs) r where
-  type FnType (arg, moreArgs) r = arg -> FnType moreArgs r
-  curryN f a = curryN (\t -> f (a, t))
-  uncurryN f (arg, moreArgs) = uncurryN (f arg) moreArgs
+instance CurryTF (HList xs) r => CurryTF (HList (a ': xs)) r where
+  type FnType (HList (a ': xs)) r = a -> FnType (HList xs) r
+  curryN f a = curryN (\t -> f (a :# t))
+  uncurryN f (a :# as) = uncurryN (f a) as
 
 -- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
 ($#) :: CurryTF args r => FnType args r -> args -> r
@@ -130,28 +152,28 @@ Although these are only provided here for 1 to 4 arguments, you can use the "sta
 {-# INLINABLE app3 #-}
 {-# INLINABLE app4 #-}
 
-type App1       a =             (a, ())
+type App1 a       = HList '[a]
 -- ^ A "stacked tuple" of one value
-type App2     a b =         (a, (b, ()))
+type App2 a b     = HList '[a,b]
 -- ^ A "stacked tuple" of two values
-type App3   a b c =     (a, (b, (c, ())))
+type App3 a b c   = HList '[a,b,c]
 -- ^ A "stacked tuple" of three values
-type App4 a b c d = (a, (b, (c, (d, ()))))
+type App4 a b c d = HList '[a,b,c,d]
 -- ^ A "stacked tuple" of four values
 
-app1 ::                a -> App1       a
+app1 :: a                -> App1 a
 -- ^ stacks one value
-app2 ::           a -> b -> App2     a b
+app2 :: a -> b           -> App2 a b
 -- ^ stacks two values
-app3 ::      a -> b -> c -> App3   a b c
+app3 :: a -> b -> c      -> App3 a b c
 -- ^ stacks three values
 app4 :: a -> b -> c -> d -> App4 a b c d
 -- ^ stacks four values
 
-app1       a =             (a, ())
-app2     a b =         (a, (b, ()))
-app3   a b c =     (a, (b, (c, ())))
-app4 a b c d = (a, (b, (c, (d, ()))))
+app1 a       = a                :# HNil
+app2 a b     = a :# b           :# HNil
+app3 a b c   = a :# b :# c      :# HNil
+app4 a b c d = a :# b :# c :# d :# HNil
 
 {- $CustomArgApp
 It is possible to define instances for other types, for example:
