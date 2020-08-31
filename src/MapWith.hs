@@ -63,8 +63,8 @@ module MapWith
   -- * Custom Injectors
   , Injector(..)
   
-  -- ** Stacked-Tuple Helpers
-  -- $StackedTupleHelpers
+  -- ** Injector Helpers
+  -- $InjectorHelpers
   , module CurryTFExps  --these are very helpful for building Injectors. Someone can import CurryTF if they want more.
   
   -- * Performance
@@ -117,7 +117,7 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --  These can be created by:
 --
 --  - (recommended) using 'app1', 'app2', etc;
---  - by nesting the values appropriately e.g @(i1, ())@ or @(i1, (i2, (i3, (i4, (i5, .. () ..)))))@; or
+--  - by building an 'HList' of values appropriately e.g @(i1 :\# HNil)@ or @(i1 :\# i2 :\# i3 :\# i\4 :# i\5 :\# HNil)@; or
 --  - defining a new instance of 'CurryTF'
 --
 --  The first value(s) to inject is/are determined by a first call to the generate function.
@@ -155,7 +155,7 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --
 --  More usefully, this might allow for e.g. injection of random values, etc.
 
--- $StackedTupleHelpers
+-- $InjectorHelpers
 -- These make it easier to define 'Injector' types and injection values. For example:
 --
 -- >>> myInj = Injector (\_ _ -> ((), app3 7 False 'z')) () :: Injector a (App3 Int Bool Char)
@@ -164,9 +164,6 @@ data Injector a i = forall s. Injector (a -> s -> (s, i)) s -- ^the first parame
 --
 -- >>> mapWith ((,,,) ^-> myInj) ["foo", "bar", "baz"]
 -- [("foo",7,False,'z'),("bar",7,False,'z'),("baz",7,False,'z')]
---
--- You are advised to use these since I'm considering re-working CurryTF so that it's not based on tuples.
--- If I do, I intend to maintain compatibility of app1/App1, etc.
 
 {-# INLINE injPair #-}
 injPair :: Injector a i1 -> Injector a i2 -> Injector a (i1, i2)

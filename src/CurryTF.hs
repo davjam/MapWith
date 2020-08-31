@@ -14,18 +14,14 @@ Copyright   : (c) David James, 2020
 License     : BSD3
 Stability   : Experimental
 
-This module includes:
+A generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
 
-- A class 'CurryTF': a generalisation of 'curry' and 'uncurry' , allowing currying of any number of arguments of different types.
-- 'HList': a basic implementation of hetrogenous lists that are an instance of CurryTF
-- Some utility functions
-
-For the class instances provided here, the arguments are packaged into a "stacked tuple".
-For example @\'x\' :# True :# EQ :# HNil@ represents a set of three arguments of different types:
+For the 'HList' instance provided here, the arguments are packaged into a heterogeneous list.
+For example @\'x\' :\# 3 :\# True :\# HNil :: HList '[Char, Int, Bool]@ represents a set of three arguments of different types:
 
 - @\'x\' :: Char@;
-- @True :: Bool@; and
-- @EQ :: Ordering@.
+- @3 :: Int@; and
+- @True :: Bool@.
 
 The TF stands for Type Family. I've given this the (possibly weird) name to avoid any conflict with similar implementations.
 -}
@@ -39,8 +35,8 @@ module CurryTF
   -- * HList
   , HList(..)
 
-  -- * Stacking Helpers
-  -- $StackingFunctions
+  -- * Multiple-Argument Helpers
+  -- $MultiArgHelpers
   , App1, App2, App3, App4
   , app1, app2, app3, app4
   
@@ -51,6 +47,10 @@ module CurryTF
   -- $SeeAlso
   )
 where
+
+{- |
+A basic implementation of heterogeneous lists that are an instance of CurryTF.
+-}
 
 data HList xs where
     HNil :: HList '[]
@@ -67,7 +67,7 @@ instance (Show a, Show (HList xs)) => Show (HList (a ': xs)) where
 {- |
 Given:
 
-- a type 'args' containing n embedded arguments; and 
+- a type 'args' containing n embedded arguments; and
 - a result type 'r'
 
 @CurryTF args r@ represents the ability to convert either way between functions:
@@ -86,37 +86,42 @@ class CurryTF args r where
     The type of the (curried) function that can have arguments of the types embedded in 'args' applied and that returns a result of type 'r'.
     For example:
 
-    >>> :kind! FnType (Char, (Int, (Bool, ()))) String
-    FnType (Char, (Int, (Bool, ()))) String :: *
+    >>> :kind! FnType (HList '[Char, Int, Bool]) String
     = Char -> Int -> Bool -> [Char]
   -}
   type FnType args r :: *
 
   {- |
-    Embeds a number of separate arguments into a single 'args' parameter, applies 'args' to a function, and returns the result.
+    Converts an uncurried function of multiple arguments (embedded in a single parameter) into a curried function of those arguments (as separate parameters).
 
     For example:
 
-    >>> fn1 (c, (n, (b, ()))) = c : replicate n '1' ++ if b then "hello" else "goodbye"
+    >>> fn1 :: HList '[Char, Int, Bool] -> String; fn1 (c :# n :# b :# HNil) = c : replicate n '1' ++ if b then "hello" else "goodbye"
+    >>> :t curryN fn1
+    curryN fn1 :: Char -> Int -> Bool -> [Char]
     >>> curryN fn1 'x' 3 True
     "x111hello"
-    
-    This also support partial application:
-    
-    >>> :t curryN fn1 'x'
-    curryN fn1 'x' :: Int -> Bool -> [Char]
   -}
 
   curryN :: (args -> r) -> FnType args r
 
   {- |
-    Applies each argument embedded in 'args' as a separate parameter to a function, and returns the result.
+    Converts a curried function (that take multiple arguments, each as a separate parameter) into an uncurried function of those arguments (all embedded in a single parameter).
 
-    For example:
+    For example, given:
 
     >>> fn2 c n b = c : replicate n '2' ++ if b then "hello" else "goodbye"
-    >>> uncurryN fn2 ('x', (3, (True, ())))
+    
+    @uncurryN fn2@ is ambiguous about how many arguments should be packaged together. This is resolved either by specifying a type of the single packed parameter or the result, for example:
+
+    >>> uncurryN fn2 ('x' :# 3 :# True :# HNil)
     "x222hello"
+    >>> uncurryN fn2 ('x' :# 3 :# HNil) True
+    "x222hello"
+    >>> :t uncurryN fn2 :: HList '[Char, Int, Bool] -> _
+    Found type wildcard ‘_’ standing for ‘[Char]’
+    >>> :t uncurryN fn2 :: HList '[Char, Int] -> _
+    Found type wildcard ‘_’ standing for ‘Bool -> [Char]’
   -}
   uncurryN :: FnType args r -> args -> r
 
@@ -127,25 +132,27 @@ instance CurryTF (HList '[]) r where
   uncurryN f HNil = f
 
 -- | the application of @arg@, followed by the application of @moreArgs@ (recursively), giving @r@
-instance CurryTF (HList xs) r => CurryTF (HList (a ': xs)) r where
-  type FnType (HList (a ': xs)) r = a -> FnType (HList xs) r
-  curryN f a = curryN (\t -> f (a :# t))
-  uncurryN f (a :# as) = uncurryN (f a) as
+instance CurryTF (HList moreArgs) r => CurryTF (HList (arg ': moreArgs)) r where
+  type FnType (HList (arg ': moreArgs)) r = arg -> FnType (HList moreArgs) r
+  curryN f arg = curryN (\moreArgs -> f (arg :# moreArgs))
+  uncurryN f (arg :# moreArgs) = uncurryN (f arg) moreArgs
 
 -- | A binary operator for 'uncurryN', so if values a, b and c are embedded in @args@ then @f $# args = f a b c@
 ($#) :: CurryTF args r => FnType args r -> args -> r
 f $# args = uncurryN f args
 
-{- $StackingFunctions
-These types and functions can make code that uses the "stacked tupples" look a little less weird. For example, you can write:
+infixr 0 $#
+
+{- $MultiArgHelpers
+These types and functions make it easier to define and use simple heterogeneous lists:
 
 >>> fn2 $# app3 'x' 3 True
 
 instead of
 
->>> fn2 $# ('x', (3, (True, ())))
+>>> fn2 $# 'x' :# 3 :# True :# HNil
 
-Although these are only provided here for 1 to 4 arguments, you can use the "stacked tuple" to apply any number of arguments.
+These are only provided here for 1 to 4 arguments, but you can use the 'HList' directly to apply any number of arguments.
 -}
 {-# INLINABLE app1 #-}
 {-# INLINABLE app2 #-}
@@ -153,22 +160,22 @@ Although these are only provided here for 1 to 4 arguments, you can use the "sta
 {-# INLINABLE app4 #-}
 
 type App1 a       = HList '[a]
--- ^ A "stacked tuple" of one value
+-- ^ An application of one value
 type App2 a b     = HList '[a,b]
--- ^ A "stacked tuple" of two values
+-- ^ An application of two values
 type App3 a b c   = HList '[a,b,c]
--- ^ A "stacked tuple" of three values
+-- ^ An application of three values
 type App4 a b c d = HList '[a,b,c,d]
--- ^ A "stacked tuple" of four values
+-- ^ An application of four values
 
 app1 :: a                -> App1 a
--- ^ stacks one value
+-- ^ applies one value
 app2 :: a -> b           -> App2 a b
--- ^ stacks two values
+-- ^ applies two values
 app3 :: a -> b -> c      -> App3 a b c
--- ^ stacks three values
+-- ^ applies three values
 app4 :: a -> b -> c -> d -> App4 a b c d
--- ^ stacks four values
+-- ^ applies four values
 
 app1 a       = a                :# HNil
 app2 a b     = a :# b           :# HNil
