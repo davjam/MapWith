@@ -91,6 +91,9 @@ testFn 113 n = take n $ withLast      fnBool           $ iterate (+1) 1
 testFn 114 n = take n $ withFirstLast fnBoolBool       $ iterate (+1) 1
 testFn 115 n = take n $ map fnBoolBoolTup $ markbounds $ iterate (+1) 1
 
+testFn 116 n = take n $ withLast      fnBool           $ cycle   [1..10000000]
+testFn 117 n = take n $ withLast      fnBool           $ myCycle [1..10000000]
+
 myCycle :: [a] -> [a]
 myCycle xs = xs' where xs' = xs ++ xs'
 {-# NOINLINE [1] myCycle #-}
